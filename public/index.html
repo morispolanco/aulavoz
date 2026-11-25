@@ -1,0 +1,2704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AulaVoz — Generador de vídeos educativos (~5 min · 720p)</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    :root {
+      --bg-page: #FFFFFF;
+      --bg-card: #F8FAFC;
+      --border-subtle: #E2E8F0;
+      --text-main: #0F172A;
+      --accent: #2563EB;
+    }
+    body {
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+    .card-surface {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+    }
+    .canvas-shell {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 10px 30px -12px rgba(15, 23, 42, 0.12);
+    }
+    .toast-enter { animation: toastSlide 0.22s ease-out; }
+    @keyframes toastSlide {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .recording-pulse { animation: recPulse 1.1s infinite ease-in-out; }
+    @keyframes recPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-white text-slate-900">
+  <!-- Barra promocional / aviso del curso -->
+  <div id="promoBanner" class="hidden bg-blue-600 text-white text-sm py-2 px-4 text-center font-medium">
+    <span id="promoBannerText"></span>
+  </div>
+
+  <!-- Barra discreta de administrador -->
+  <div id="adminTopBar" class="hidden bg-slate-900 text-white text-xs sm:text-sm py-2 px-4 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span class="font-medium">Modo administrador activo · Exportación directa sin WhatsApp</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="topBarAdminBtn" type="button" class="px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium transition">
+          Administración
+        </button>
+        <button id="topBarLogoutBtn" type="button" class="px-3 py-1 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold transition">
+          Salir (probar como usuario)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encabezado principal -->
+  <header class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <button id="logoTrigger" type="button" class="flex items-center gap-2.5 text-left group focus:outline-none" title="AulaVoz">
+        <span class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-sm group-hover:bg-blue-700 transition">
+          🎓
+        </span>
+        <span class="flex flex-col leading-tight">
+          <span class="text-lg font-extrabold tracking-tight text-slate-900">AulaVoz</span>
+          <span class="text-xs text-slate-500 hidden sm:inline">Estudio de vídeos educativos · 720p (~5 min)</span>
+        </span>
+      </button>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span id="engineStatusPill" class="hidden md:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+          <span id="engineStatusText">Listo para diseñar</span>
+        </span>
+        <button id="headerBackToAppBtn" type="button" class="hidden px-3.5 py-2 rounded-lg text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-800 transition">
+          ← Volver a la aplicación
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- VISTA PRINCIPAL -->
+  <main id="appView" class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+    <section class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div class="max-w-2xl">
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+          Convierte cualquier lección en un vídeo explicativo de 5 minutos
+        </h1>
+        <p class="mt-1.5 text-sm sm:text-base text-slate-600">
+          Transforma apuntes o síntesis de un curso en un esquema animado en HD 720p con gráficas, diagramas, movimientos de texto, 8 estilos originales y narración docente.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-medium text-slate-500">Lecciones de ejemplo:</span>
+        <button type="button" data-preset="filosofia" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+          Filosofía · ~5 min
+        </button>
+        <button type="button" data-preset="biologia" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+          Biología · ~5 min
+        </button>
+        <button type="button" data-preset="economia" class="preset-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+          Economía · ~5 min
+        </button>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Columna izquierda: Formulario de la lección -->
+      <section class="lg:col-span-5 card-surface rounded-2xl p-5 sm:p-6 space-y-5">
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="text-lg font-bold text-slate-900">1. Contenido de la lección</h2>
+          <button id="dictateBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 text-slate-700 transition">
+            <span>🎙️</span>
+            <span id="dictateBtnLabel">Dictar apuntes</span>
+          </button>
+        </div>
+
+        <form id="lessonForm" class="space-y-4">
+          <div>
+            <label for="lessonTitleInput" class="block text-sm font-semibold text-slate-800 mb-1.5">
+              Título de la lección o tema
+            </label>
+            <input
+              id="lessonTitleInput"
+              type="text"
+              required
+              maxlength="90"
+              placeholder="Ej. «El pensamiento crítico y las falacias informales»"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600"
+            />
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="lessonContentInput" class="block text-sm font-semibold text-slate-800">
+                Apuntes, desarrollo o síntesis de la lección
+              </label>
+              <span id="wordCounter" class="text-xs font-medium text-slate-500">0 palabras</span>
+            </div>
+            <textarea
+              id="lessonContentInput"
+              rows="6"
+              required
+              placeholder="Pega aquí el contenido de tu clase, conceptos clave, procesos, comparaciones o ejemplos que deseas explicar en vídeo…"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600 resize-y"
+            ></textarea>
+            <p class="mt-1.5 text-xs text-slate-500">
+              Se estructurará automáticamente en un esquema explicativo de ~5 minutos (12 a 15 escenas) con gráficas, mapas mentales, líneas de tiempo e ilustraciones.
+            </p>
+          </div>
+
+          <div>
+            <label for="courseLabelInput" class="block text-sm font-semibold text-slate-800 mb-1.5">
+              Curso, asignatura o nivel <span class="font-normal text-slate-400">(opcional)</span>
+            </label>
+            <input
+              id="courseLabelInput"
+              type="text"
+              maxlength="80"
+              placeholder="Ej. Filosofía y Lógica · Nivel universitario"
+              class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600"
+            />
+          </div>
+
+          <!-- 8 estilos + paleta + enfoque didáctico -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="visualStyleSelect" class="block text-xs font-semibold text-slate-700">
+                  Estilo visual (8 estilos)
+                </label>
+                <button id="randomStyleBtn" type="button" class="text-[11px] font-semibold text-blue-600 hover:underline">
+                  🎲 Otro estilo
+                </button>
+              </div>
+              <select id="visualStyleSelect" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600">
+                <option value="modern">Moderno limpio</option>
+                <option value="neobrutal">Neobrutalista</option>
+                <option value="darktech">Oscuro tecnológico</option>
+                <option value="editorial">Editorial elegante</option>
+                <option value="glass">Cristal (Glassmorphism)</option>
+                <option value="retro">Terminal retro</option>
+                <option value="swiss">Minimalista suizo</option>
+                <option value="chalkboard">Pizarra educativa</option>
+              </select>
+            </div>
+            <div>
+              <label for="paletteSelect" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Paleta cromática
+              </label>
+              <select id="paletteSelect" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600">
+                <option value="blue">Azul académico</option>
+                <option value="emerald">Verde botánico</option>
+                <option value="purple">Púrpura humanidades</option>
+                <option value="graphite">Grafito sobrio</option>
+              </select>
+            </div>
+            <div class="sm:col-span-2">
+              <label for="approachSelect" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                Enfoque pedagógico
+              </label>
+              <select id="approachSelect" class="w-full px-3 py-2.5 rounded-xl bg-white border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600">
+                <option value="Explicación profunda">Explicación profunda (clase completa)</option>
+                <option value="Síntesis de repaso">Síntesis de repaso para examen</option>
+                <option value="Análisis paso a paso">Análisis paso a paso con ejemplos</option>
+                <option value="Estudio de caso">Estudio de caso aplicado</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="flex items-center justify-between gap-3 p-3 rounded-xl bg-white border border-slate-200 cursor-pointer">
+            <div>
+              <span class="block text-sm font-semibold text-slate-800">Música ambiental de estudio</span>
+              <span class="block text-xs text-slate-500">Fondo suave sintetizado en Web Audio API</span>
+            </div>
+            <input id="bgMusicToggle" type="checkbox" checked class="w-5 h-5 accent-blue-600 rounded cursor-pointer" />
+          </label>
+
+          <button
+            id="generateBtn"
+            type="submit"
+            class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-sm shadow-sm transition flex items-center justify-center gap-2"
+          >
+            <span>✨</span>
+            <span id="generateBtnText">Generar vídeo educativo (~5 min)</span>
+          </button>
+
+          <div id="generationProgress" class="hidden rounded-xl bg-white border border-blue-200 p-3.5 space-y-2">
+            <div class="flex items-center justify-between text-xs font-semibold text-blue-700">
+              <span id="genStepLabel">Estructurando lección…</span>
+              <span id="genStepPct">15 %</span>
+            </div>
+            <div class="w-full h-2 rounded-full bg-blue-100 overflow-hidden">
+              <div id="genProgressBar" class="h-full bg-blue-600 transition-all duration-300" style="width: 15%"></div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Columna derecha: Estudio 720p + Narración aparte + Editor -->
+      <section class="lg:col-span-7 space-y-5">
+        <div class="card-surface rounded-2xl p-4 sm:p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">2. Estudio didáctico HD 720p</h2>
+              <p id="studioMetaLine" class="text-xs text-slate-500 mt-0.5">
+                Resolución 1280 × 720 (720p) · 12 escenas · 04:55 totales
+              </p>
+            </div>
+            <span id="audioEngineBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">
+              🔊 Vista previa con voz · Música lista
+            </span>
+          </div>
+
+          <!-- Lienzo HD 720p (1280x720) -->
+          <div class="canvas-shell rounded-xl overflow-hidden relative">
+            <canvas id="videoCanvas" width="1280" height="720" class="w-full aspect-video block bg-white"></canvas>
+          </div>
+
+          <!-- Narración aparte de las diapositivas -->
+          <div class="rounded-xl bg-white border border-slate-200 p-3.5 space-y-1.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span id="narrationPanelLabel" class="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                Narración · Escena 1
+              </span>
+              <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input id="showCaptionsToggle" type="checkbox" class="accent-blue-600 rounded cursor-pointer" />
+                <span>Incrustar subtítulos en el vídeo</span>
+              </label>
+            </div>
+            <p id="narrationPanelText" class="text-sm text-slate-800 leading-relaxed"></p>
+          </div>
+
+          <!-- Controles de reproducción -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <span id="timeElapsedLabel" class="text-xs font-mono font-semibold text-slate-600 w-11">00:00</span>
+              <input id="timelineScrubber" type="range" min="0" max="1000" value="0" class="flex-1 accent-blue-600 cursor-pointer" aria-label="Línea de tiempo" />
+              <span id="timeTotalLabel" class="text-xs font-mono font-semibold text-slate-600 w-11 text-right">05:00</span>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <button id="playPauseBtn" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition inline-flex items-center gap-1.5">
+                  <span id="playPauseIcon">▶</span>
+                  <span id="playPauseText">Reproducir</span>
+                </button>
+                <button id="restartBtn" type="button" class="px-3 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-sm font-medium transition">
+                  ↺ Reiniciar
+                </button>
+                <button id="prevSceneBtn" type="button" class="px-2.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-sm font-medium transition" title="Escena anterior">◀</button>
+                <button id="nextSceneBtn" type="button" class="px-2.5 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 text-sm font-medium transition" title="Escena siguiente">▶</button>
+              </div>
+              <button id="downloadTxtBtn" type="button" class="px-3.5 py-2 rounded-xl bg-white border border-slate-300 hover:border-slate-400 text-slate-700 text-xs sm:text-sm font-semibold transition">
+                📄 Descargar guion (.txt)
+              </button>
+            </div>
+          </div>
+
+          <!-- Exportación MP4 720p -->
+          <div class="pt-2 border-t border-slate-200 space-y-3">
+            <button id="exportMp4Btn" type="button" class="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base shadow-sm transition flex items-center justify-center gap-2">
+              <span id="exportBtnIcon">🔒</span>
+              <span id="exportBtnLabel">Descargar vídeo educativo MP4 720p (con audio)</span>
+            </button>
+            <p id="exportAudioHint" class="text-xs text-slate-500 text-center">
+              El archivo 720p incluye la música ambiental y la voz de Gemini TTS o tus grabaciones de micrófono.
+            </p>
+
+            <div id="exportProgressBox" class="hidden rounded-xl bg-white border border-blue-200 p-4 space-y-2.5">
+              <div class="flex items-center justify-between gap-2 text-xs sm:text-sm font-semibold text-slate-800">
+                <span id="exportStatusText">Renderizando vídeo 720p con audio…</span>
+                <span id="exportPctLabel" class="text-blue-600 font-mono">0 %</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                <div id="exportProgressBar" class="h-full bg-blue-600 transition-all duration-150" style="width: 0%"></div>
+              </div>
+              <div class="flex items-center justify-between text-xs text-slate-500">
+                <span id="exportFormatHint">Grabando lienzo HD 1280 × 720 a 30 fps…</span>
+                <button id="cancelExportBtn" type="button" class="text-rose-600 hover:underline font-semibold">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editor de escenas en vivo -->
+        <div class="card-surface rounded-2xl p-4 sm:p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-base font-bold text-slate-900">3. Editor de escenas, esquemas y movimientos</h3>
+            <div class="flex items-center gap-2">
+              <button id="genAllVoicesBtn" type="button" class="px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 text-xs font-semibold text-blue-700 transition">
+                🔊 Generar todas las voces
+              </button>
+              <button id="addSceneBtn" type="button" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 text-xs font-semibold text-slate-700 transition">
+                + Añadir escena
+              </button>
+            </div>
+          </div>
+
+          <div id="sceneTabs" class="flex flex-wrap gap-2"></div>
+
+          <div id="sceneEditorForm" class="bg-white border border-slate-200 rounded-xl p-4 space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div class="sm:col-span-3">
+                <label for="editSceneType" class="block text-xs font-semibold text-slate-700 mb-1">Bloque</label>
+                <select id="editSceneType" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm bg-white">
+                  <option value="apertura">Apertura</option>
+                  <option value="concepto">Concepto</option>
+                  <option value="esquema">Esquema</option>
+                  <option value="grafica">Gráfica</option>
+                  <option value="comparacion">Comparación</option>
+                  <option value="proceso">Proceso</option>
+                  <option value="ejemplo">Ejemplo</option>
+                  <option value="sintesis">Síntesis</option>
+                </select>
+              </div>
+              <div class="sm:col-span-4">
+                <label for="editSceneVisual" class="block text-xs font-semibold text-slate-700 mb-1">Gráfica / esquema visual</label>
+                <select id="editSceneVisual" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm bg-white">
+                  <option value="mapa_mental">Mapa mental</option>
+                  <option value="barras">Gráfica de barras</option>
+                  <option value="linea_tiempo">Línea de tiempo</option>
+                  <option value="comparativa">Tabla comparativa</option>
+                  <option value="ciclo">Ciclo de 4 fases</option>
+                  <option value="piramide">Pirámide conceptual</option>
+                  <option value="ilustracion">Ilustración vectorial</option>
+                </select>
+              </div>
+              <div class="sm:col-span-3">
+                <label for="editSceneAnim" class="block text-xs font-semibold text-slate-700 mb-1">Movimiento de texto</label>
+                <select id="editSceneAnim" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-xs sm:text-sm bg-white">
+                  <option value="deslizar">Deslizar</option>
+                  <option value="maquina">Máquina de escribir</option>
+                  <option value="escala">Escala cinética</option>
+                  <option value="cascada">Cascada por palabras</option>
+                  <option value="revelar">Revelado editorial</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2">
+                <label for="editSceneIcon" class="block text-xs font-semibold text-slate-700 mb-1">Icono</label>
+                <input id="editSceneIcon" type="text" maxlength="4" class="w-full px-2 py-2 rounded-lg border border-slate-300 text-center text-base bg-white" />
+              </div>
+            </div>
+
+            <div>
+              <label for="editSceneTitle" class="block text-xs font-semibold text-slate-700 mb-1">Título gráfico (máx. 7 palabras)</label>
+              <input id="editSceneTitle" type="text" maxlength="80" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white" />
+            </div>
+
+            <div>
+              <label for="editSceneBullets" class="block text-xs font-semibold text-slate-700 mb-1">Puntos clave del esquema (2 a 3 líneas)</label>
+              <textarea id="editSceneBullets" rows="2" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white resize-y"></textarea>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="editSceneNarration" class="block text-xs font-semibold text-slate-700">Explicación narrada en español</label>
+                <span id="editSceneDurationMeta" class="text-xs font-medium text-blue-600">Duración: 22 s</span>
+              </div>
+              <textarea id="editSceneNarration" rows="3" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white resize-y"></textarea>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <label for="editSceneDuration" class="text-xs font-semibold text-slate-800">Duración de esta escena (segundos)</label>
+                <div class="flex items-center gap-2">
+                  <input id="editSceneDuration" type="number" min="3" max="60" step="0.5" value="22" class="w-20 px-2.5 py-1 rounded-lg border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 text-center" />
+                  <span class="text-xs text-slate-500">s</span>
+                  <button id="autoDurationBtn" type="button" class="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 text-xs font-semibold text-slate-700 transition">
+                    Ajuste auto
+                  </button>
+                </div>
+              </div>
+              <input id="editSceneDurationRange" type="range" min="3" max="45" step="0.5" value="22" class="w-full accent-blue-600 cursor-pointer" />
+              <p class="text-[11px] text-slate-500">
+                Si la narración tarda un poco más durante la vista previa, la escena espera automáticamente a que termine para no cortar la explicación.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+              <div class="flex flex-wrap items-center gap-2">
+                <button id="regenSceneAudioBtn" type="button" class="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition">
+                  🔊 Regenerar audio
+                </button>
+                <button id="recordVoiceBtn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-semibold transition inline-flex items-center gap-1.5">
+                  <span id="recordDot">🎙️</span>
+                  <span id="recordVoiceLabel">Grabar mi voz</span>
+                </button>
+                <button id="clearVoiceBtn" type="button" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition">
+                  Quitar grabación
+                </button>
+              </div>
+              <button id="deleteSceneBtn" type="button" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition">
+                Eliminar escena
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- VISTA DEDICADA DE ADMINISTRACIÓN -->
+  <main id="adminView" class="hidden flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <section id="adminLoginCard" class="max-w-md mx-auto card-surface rounded-2xl p-6 sm:p-8 space-y-5 mt-6">
+      <div class="space-y-1">
+        <span class="inline-block text-xs font-semibold uppercase tracking-wider text-blue-600">Acceso restringido</span>
+        <h1 class="text-2xl font-extrabold text-slate-900">Panel de administración</h1>
+        <p class="text-sm text-slate-600">
+          Inicia sesión para gestionar permisos por WhatsApp, códigos de 15 vídeos en Neon, tu clave de Google Gemini y estadísticas.
+        </p>
+      </div>
+      <form id="adminLoginForm" class="space-y-4">
+        <div>
+          <label for="adminPasswordInput" class="block text-sm font-semibold text-slate-800 mb-1.5">Contraseña de administrador</label>
+          <input id="adminPasswordInput" type="password" required placeholder="Introduce tu contraseña" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600" />
+          <p class="mt-1.5 text-xs text-slate-500">Clave inicial: <code class="px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 font-mono">admin123</code></p>
+        </div>
+        <p id="adminLoginError" class="hidden text-xs font-semibold text-rose-600"></p>
+        <div class="flex items-center gap-2">
+          <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition">Entrar al panel</button>
+          <button id="loginCancelBtn" type="button" class="py-2.5 px-4 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-sm transition">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="adminDashboard" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900">Administración de AulaVoz</h1>
+          <p class="text-sm text-slate-600">Configuración persistente en PostgreSQL (Neon) y Google Gemini.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="adminBackBtn" type="button" class="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-sm font-semibold transition">← Volver a la aplicación</button>
+          <button id="adminLogoutBtn" type="button" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold transition">Cerrar sesión</button>
+        </div>
+      </div>
+
+      <div id="defaultPwdWarning" class="hidden rounded-xl bg-amber-50 border border-amber-300 p-4 text-sm text-amber-900 flex items-start gap-3">
+        <span class="text-lg">⚠️</span>
+        <div>
+          <p class="font-semibold">Estás usando la contraseña inicial («admin123»)</p>
+          <p class="text-xs mt-0.5 text-amber-800">Cámbiala en la sección «5. Seguridad y sesión» al final de esta página.</p>
+        </div>
+      </div>
+
+      <!-- Métricas -->
+      <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-base font-bold text-slate-900">Métricas reales (Neon)</h2>
+          <div class="flex items-center gap-2">
+            <button id="refreshMetricsBtn" type="button" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition">↻ Actualizar</button>
+            <button id="resetMetricsBtn" type="button" class="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 hover:bg-rose-100 text-xs font-semibold text-rose-700 transition">Reiniciar estadísticas</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="bg-white border border-slate-200 rounded-xl p-3.5"><span class="block text-xs text-slate-500">Visitas</span><span id="metricVisit" class="text-2xl font-extrabold text-slate-900">0</span></div>
+          <div class="bg-white border border-slate-200 rounded-xl p-3.5"><span class="block text-xs text-slate-500">Lecciones</span><span id="metricGenerated" class="text-2xl font-extrabold text-blue-600">0</span></div>
+          <div class="bg-white border border-slate-200 rounded-xl p-3.5"><span class="block text-xs text-slate-500">Solicitudes WA</span><span id="metricWhatsapp" class="text-2xl font-extrabold text-emerald-600">0</span></div>
+          <div class="bg-white border border-slate-200 rounded-xl p-3.5"><span class="block text-xs text-slate-500">Códigos canjeados</span><span id="metricCodes" class="text-2xl font-extrabold text-violet-600">0</span></div>
+          <div class="bg-white border border-slate-200 rounded-xl p-3.5 col-span-2 sm:col-span-1"><span class="block text-xs text-slate-500">MP4 exportados</span><span id="metricExported" class="text-2xl font-extrabold text-slate-900">0</span></div>
+        </div>
+      </div>
+
+      <form id="adminConfigForm" class="space-y-6">
+        <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900">1. Permisos y WhatsApp</h2>
+          <label class="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white border border-slate-200 cursor-pointer">
+            <div>
+              <span class="block text-sm font-semibold text-slate-900">Exigir permiso por WhatsApp para exportar MP4</span>
+              <span class="block text-xs text-slate-500">Los administradores siempre descargan gratis y sin marca de agua.</span>
+            </div>
+            <input id="cfgRequireWa" type="checkbox" class="w-5 h-5 accent-blue-600 cursor-pointer" />
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div class="sm:col-span-8">
+              <label for="cfgWaNumber" class="block text-xs font-semibold text-slate-700 mb-1">Número de WhatsApp internacional (sin «+»)</label>
+              <input id="cfgWaNumber" type="text" placeholder="50212345678" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm" />
+            </div>
+            <div class="sm:col-span-4">
+              <button id="testWaBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition">Probar WhatsApp</button>
+            </div>
+          </div>
+          <div>
+            <label for="cfgWaTemplate" class="block text-xs font-semibold text-slate-700 mb-1">Plantilla de mensaje (usa <code class="text-blue-700">{app}</code> y <code class="text-blue-700">{duracion}</code>)</label>
+            <textarea id="cfgWaTemplate" rows="3" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm"></textarea>
+          </div>
+        </div>
+
+        <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-base font-bold text-slate-900">2. Configuración de Google Gemini</h2>
+            <span id="geminiKeyStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Estado de GEMINI_API_KEY</span>
+          </div>
+          <div>
+            <label for="cfgGeminiApiKey" class="block text-xs font-semibold text-slate-700 mb-1">Clave de API de Google Gemini (<code class="text-blue-700">AIzaSy…</code>)</label>
+            <div class="flex items-center gap-2">
+              <input id="cfgGeminiApiKey" type="password" autocomplete="off" placeholder="Pega aquí tu clave AIzaSy… (vacío para conservar la actual)" class="flex-1 px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm font-mono" />
+              <button id="toggleCfgGeminiKeyBtn" type="button" class="px-3 py-2.5 rounded-xl bg-white border border-slate-300 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition">Mostrar</button>
+              <button id="clearCfgGeminiKeyBtn" type="button" class="px-3 py-2.5 rounded-xl bg-rose-50 border border-rose-200 hover:bg-rose-100 text-xs font-semibold text-rose-700 transition">Borrar</button>
+            </div>
+            <p id="cfgGeminiKeyHint" class="mt-1 text-xs text-slate-500">Se guarda en Neon y nunca se expone a usuarios regulares.</p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="cfgGeminiModel" class="block text-xs font-semibold text-slate-700 mb-1">Modelo de guion educativo</label>
+              <select id="cfgGeminiModel" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm">
+                <option value="gemini-3.8-flash">gemini-3.8-flash (rápido y recomendado)</option>
+                <option value="gemini-4-carbon">gemini-4-carbon (máxima calidad académica)</option>
+              </select>
+            </div>
+            <div>
+              <label for="cfgGeminiVoice" class="block text-xs font-semibold text-slate-700 mb-1">Voz de Gemini TTS en español</label>
+              <select id="cfgGeminiVoice" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm">
+                <option value="Aoede">Aoede (femenina cálida)</option>
+                <option value="Kore">Kore (femenina profesional)</option>
+                <option value="Puck">Puck (masculina dinámica)</option>
+                <option value="Charon">Charon (masculina serena)</option>
+                <option value="Fenrir">Fenrir (masculina expresiva)</option>
+                <option value="Leda">Leda (femenina juvenil)</option>
+                <option value="Orus">Orus (masculina docente)</option>
+                <option value="Zephyr">Zephyr (femenina brillante)</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button id="testGeminiBtn" type="button" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition">Probar conexión con Gemini</button>
+            <button id="testTtsVoiceBtn" type="button" class="px-4 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs sm:text-sm font-semibold transition">🔊 Probar voz seleccionada</button>
+            <span id="testGeminiResult" class="text-xs text-slate-600"></span>
+          </div>
+        </div>
+
+        <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900">3. Marca de agua y avisos</h2>
+          <div>
+            <label for="cfgWatermarkText" class="block text-xs font-semibold text-slate-700 mb-1">Marca de agua (solo para usuarios regulares)</label>
+            <input id="cfgWatermarkText" type="text" maxlength="60" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm" />
+          </div>
+          <label class="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white border border-slate-200 cursor-pointer">
+            <div>
+              <span class="block text-sm font-semibold text-slate-900">Mostrar barra de aviso superior</span>
+              <span class="block text-xs text-slate-500">Mensaje breve visible en la parte superior de AulaVoz.</span>
+            </div>
+            <input id="cfgPromoEnabled" type="checkbox" class="w-5 h-5 accent-blue-600 cursor-pointer" />
+          </label>
+          <div>
+            <label for="cfgPromoText" class="block text-xs font-semibold text-slate-700 mb-1">Texto del aviso</label>
+            <input id="cfgPromoText" type="text" maxlength="140" class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-sm" />
+          </div>
+          <div class="pt-2">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow-sm transition">Guardar toda la configuración</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Gestor de códigos -->
+      <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-base font-bold text-slate-900">Gestor de códigos de descarga (Neon)</h2>
+            <p class="text-xs text-slate-500">Crea códigos de 15 vídeos (predeterminado), otros límites o ilimitados (0).</p>
+          </div>
+          <button id="quickCodeBtn" type="button" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition">⚡ Generar código rápido (15 vídeos)</button>
+        </div>
+        <form id="createCodeForm" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+          <div class="sm:col-span-5">
+            <label for="newCodeInput" class="block text-xs font-semibold text-slate-700 mb-1">Código personalizado (opcional)</label>
+            <input id="newCodeInput" type="text" placeholder="Ej. CURSO2026" class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm uppercase" />
+          </div>
+          <div class="sm:col-span-4">
+            <label for="newCodeMaxUses" class="block text-xs font-semibold text-slate-700 mb-1">Límite de vídeos</label>
+            <select id="newCodeMaxUses" class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm">
+              <option value="15" selected>15 vídeos (predeterminado)</option>
+              <option value="1">1 vídeo</option>
+              <option value="5">5 vídeos</option>
+              <option value="10">10 vídeos</option>
+              <option value="30">30 vídeos</option>
+              <option value="0">Ilimitado (0)</option>
+            </select>
+          </div>
+          <div class="sm:col-span-3">
+            <button type="submit" class="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition">Crear código</button>
+          </div>
+        </form>
+        <div class="overflow-x-auto bg-white border border-slate-200 rounded-xl">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-600">
+              <tr>
+                <th class="py-2.5 px-3.5 font-semibold">Código</th>
+                <th class="py-2.5 px-3.5 font-semibold">Usos</th>
+                <th class="py-2.5 px-3.5 font-semibold">Estado</th>
+                <th class="py-2.5 px-3.5 font-semibold text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="codesTableBody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card-surface rounded-2xl p-5 sm:p-6 space-y-4">
+        <h2 class="text-base font-bold text-slate-900">5. Seguridad y sesión</h2>
+        <form id="changePasswordForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label for="curPwdInput" class="block text-xs font-semibold text-slate-700 mb-1">Contraseña actual</label>
+            <input id="curPwdInput" type="password" required class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <label for="newPwdInput" class="block text-xs font-semibold text-slate-700 mb-1">Nueva contraseña (mín. 6)</label>
+            <input id="newPwdInput" type="password" required minlength="6" class="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm" />
+          </div>
+          <div>
+            <button type="submit" class="w-full py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition">Actualizar contraseña</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL WHATSAPP -->
+  <div id="whatsappModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 space-y-5">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">Desbloquear descarga MP4 720p</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Solicita tu código de acceso por WhatsApp y valídalo aquí.</p>
+        </div>
+        <button id="closeWaModalBtn" type="button" class="text-slate-400 hover:text-slate-700 text-xl leading-none font-bold px-1">×</button>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2.5">
+        <span class="inline-block text-xs font-bold text-emerald-700 uppercase tracking-wide">Paso 1</span>
+        <p class="text-sm font-semibold text-slate-800">Solicitar código por WhatsApp</p>
+        <p class="text-xs text-slate-600">Se abrirá WhatsApp con el título de tu lección y la duración del vídeo prellenados.</p>
+        <button id="openWhatsappBtn" type="button" class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition flex items-center justify-center gap-2">
+          <span>💬</span><span>Pedir código por WhatsApp</span>
+        </button>
+      </div>
+      <form id="validateCodeForm" class="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2.5">
+        <span class="inline-block text-xs font-bold text-blue-700 uppercase tracking-wide">Paso 2</span>
+        <label for="unlockCodeInput" class="block text-sm font-semibold text-slate-800">Validar código recibido</label>
+        <div class="flex gap-2">
+          <input id="unlockCodeInput" type="text" required placeholder="Ej. AV-A1B2C3" class="flex-1 px-3 py-2 rounded-xl bg-white border border-slate-300 text-sm uppercase font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-600" />
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition">Validar</button>
+        </div>
+        <p id="validateCodeError" class="hidden text-xs font-semibold text-rose-600"></p>
+      </form>
+    </div>
+  </div>
+
+  <footer class="border-t border-slate-200 bg-slate-50/70 mt-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+      <span>«AulaVoz» · Vídeos educativos explicativos en 720p con Google Gemini y Neon.</span>
+      <button id="footerAdminLink" type="button" class="text-slate-500 hover:text-blue-600 font-medium transition">Administración</button>
+    </div>
+  </footer>
+
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"></div>
+
+  <script>
+    (() => {
+      const STANDALONE_PREVIEW = false;
+
+      const STYLE_KEYS = ['modern', 'neobrutal', 'darktech', 'editorial', 'glass', 'retro', 'swiss', 'chalkboard'];
+
+      const PALETTES = {
+        blue: { primary: '#2563EB', primaryDark: '#1E40AF', primarySoft: '#EFF6FF', accent: '#0EA5E9', border: '#DBEAFE', text: '#0F172A', muted: '#475569' },
+        emerald: { primary: '#059669', primaryDark: '#065F46', primarySoft: '#ECFDF5', accent: '#10B981', border: '#D1FAE5', text: '#0F172A', muted: '#475569' },
+        purple: { primary: '#7C3AED', primaryDark: '#5B21B6', primarySoft: '#F5F3FF', accent: '#A855F7', border: '#EDE9FE', text: '#0F172A', muted: '#475569' },
+        graphite: { primary: '#334155', primaryDark: '#0F172A', primarySoft: '#F1F5F9', accent: '#64748B', border: '#CBD5E1', text: '#0F172A', muted: '#475569' }
+      };
+
+      const SCENE_TYPE_LABELS = {
+        apertura: 'Apertura',
+        concepto: 'Concepto',
+        esquema: 'Esquema',
+        grafica: 'Gráfica',
+        comparacion: 'Comparación',
+        proceso: 'Proceso',
+        ejemplo: 'Ejemplo',
+        sintesis: 'Síntesis'
+      };
+
+      const PRESETS = {
+        filosofia: {
+          lessonTitle: 'El pensamiento crítico y las falacias informales',
+          courseLabel: 'Filosofía y Argumentación · Nivel universitario',
+          approach: 'Explicación profunda',
+          style: 'editorial',
+          palette: 'purple',
+          content: 'El pensamiento crítico consiste en examinar las razones que sostienen una afirmación antes de aceptarla como verdadera. Todo argumento válido se compone de premisas que ofrecen respaldo racional y una conclusión que se sigue de ellas. Las falacias informales son errores de razonamiento que parecen persuasivos en el lenguaje cotidiano, pero carecen de sustento lógico. Entre las más frecuentes están el ataque personal (ad hominem), que descalifica al interlocutor en lugar de refutar sus argumentos; el hombre de paja, que distorsiona la postura ajena para rebatirla con facilidad; la falsa dicotomía, que reduce un problema complejo a solo dos opciones extremas; y la apelación a la autoridad cuando se cita a alguien fuera de su campo de conocimiento. Distinguir la validez formal de la solidez empírica permite analizar debates públicos, textos académicos y noticias con rigor. En el aula, aplicar una lista de verificación argumental fortalece la claridad intelectual y la honestidad dialógica.'
+        },
+        biologia: {
+          lessonTitle: 'Fotosíntesis y respiración celular: el ciclo de la energía',
+          courseLabel: 'Biología Celular · Módulo 3',
+          approach: 'Análisis paso a paso',
+          style: 'chalkboard',
+          palette: 'emerald',
+          content: 'La vida en la Tierra depende del intercambio continuo de energía entre los organismos autótrofos y heterótrofos. En los cloroplastos de las células vegetales ocurre la fotosíntesis, un proceso anabólico que transforma la energía luminosa, el agua y el dióxido de carbono en glucosa y oxígeno. Se divide en dos etapas: la fase luminosa en los tilacoides, que genera ATP y NADPH liberando oxígeno, y el ciclo de Calvin en el estroma, que fija el carbono en moléculas orgánicas. En contraste, la respiración celular ocurre principalmente en las mitocondrias de casi todos los seres vivos: degrada la glucosa mediante glucólisis, ciclo de Krebs y cadena de transporte de electrones para producir hasta 36 moléculas de ATP por glucosa. Ambos procesos forman un ciclo complementario: los productos de la fotosíntesis sirven de sustrato a la respiración, manteniendo el equilibrio del carbono y del oxígeno en la biosfera.'
+        },
+        economia: {
+          lessonTitle: 'Inflación, tasas de interés y política monetaria',
+          courseLabel: 'Introducción a la Macroeconomía',
+          approach: 'Síntesis de repaso',
+          style: 'neobrutal',
+          palette: 'blue',
+          content: 'La inflación es el aumento sostenido y generalizado del nivel de precios de bienes y servicios en una economía durante un periodo determinado, lo que reduce el poder adquisitivo del dinero. Sus causas principales suelen agruparse en inflación de demanda, cuando el gasto total supera la capacidad productiva; inflación de costos, originada por el encarecimiento de materias primas, energía o salarios; e inflación por expectativas. Para mantener la estabilidad de precios, los bancos centrales utilizan la política monetaria, cuyo instrumento principal es la tasa de interés de referencia. Cuando la inflación acelera, el banco central sube la tasa para encarecer el crédito, moderar el consumo y enfriar la demanda agregada. Cuando la actividad económica se estanca, reducir la tasa estimula la inversión y el empleo. Comprender este equilibrio entre crecimiento económico y estabilidad de precios permite interpretar decisiones financieras cotidianas y reportes macroeconómicos.'
+        }
+      };
+
+      const STORAGE_KEY = 'aulavoz_standalone_db_v1';
+      function loadLocalDb() {
+        const defaults = {
+          admin_config: {
+            admin_password: 'admin123',
+            whatsapp_number: '50212345678',
+            whatsapp_template: 'Hola, acabo de crear un vídeo educativo para la lección «{app}» ({duracion}) en AulaVoz. ¿Podrías enviarme un código de descarga MP4?',
+            require_whatsapp_permission: true,
+            watermark_text: 'Creado con AulaVoz',
+            promo_banner_enabled: false,
+            promo_banner_text: 'Convierte tus lecciones en vídeos didácticos de 5 minutos con esquemas y narración.',
+            gemini_api_key: '',
+            gemini_model: 'gemini-3.8-flash',
+            gemini_voice: 'Aoede'
+          },
+          export_codes: [
+            { id: 1, code: 'CURSO2026', max_uses: 15, current_uses: 0, active: true, created_at: new Date().toISOString() }
+          ],
+          app_metrics: { visit: 1, tutorial_generated: 0, whatsapp_requested: 0, code_validated: 0, mp4_exported: 0 },
+          is_admin: false
+        };
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+            return defaults;
+          }
+          const parsed = JSON.parse(raw);
+          const mergedCfg = { ...defaults.admin_config, ...(parsed.admin_config || {}) };
+          if (['gemini-2.5-flash', 'gemini-2.5-pro'].includes(mergedCfg.gemini_model)) mergedCfg.gemini_model = 'gemini-3.8-flash';
+          return {
+            admin_config: mergedCfg,
+            export_codes: Array.isArray(parsed.export_codes) ? parsed.export_codes : defaults.export_codes,
+            app_metrics: { ...defaults.app_metrics, ...(parsed.app_metrics || {}) },
+            is_admin: Boolean(parsed.is_admin)
+          };
+        } catch {
+          return defaults;
+        }
+      }
+
+      function saveLocalDb(db) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); } catch {}
+      }
+
+      function countWords(text) {
+        return (text || '').trim().split(/\s+/).filter(Boolean).length;
+      }
+
+      function calcDurationSec(narration) {
+        return Math.max(8, Math.ceil(countWords(narration) / 2.0) + 1);
+      }
+
+      function generateLocalLessonScript({ lessonTitle, content, courseLabel, approach }) {
+        const title = (lessonTitle || 'Lección del curso').trim();
+        const course = (courseLabel || 'Curso explicativo').trim();
+        const sentences = (content || '').split(/[\n.!?;]+/).map((s) => s.trim()).filter((s) => s.length > 12);
+
+        const blueprint = [
+          { tipo: 'apertura', visual: 'ilustracion', animacion: 'revelar', icono: '🎓', label: `Introducción a ${title}` },
+          { tipo: 'esquema', visual: 'mapa_mental', animacion: 'deslizar', icono: '🧭', label: 'Mapa general de la lección' },
+          { tipo: 'concepto', visual: 'piramide', animacion: 'maquina', icono: '🧱', label: 'Fundamentos y conceptos base' },
+          { tipo: 'proceso', visual: 'linea_tiempo', animacion: 'cascada', icono: '⏳', label: 'Desarrollo paso a paso' },
+          { tipo: 'concepto', visual: 'ilustracion', animacion: 'escala', icono: '🔬', label: 'Mecanismos y relaciones clave' },
+          { tipo: 'grafica', visual: 'barras', animacion: 'deslizar', icono: '📊', label: 'Peso e impacto de cada factor' },
+          { tipo: 'comparacion', visual: 'comparativa', animacion: 'revelar', icono: '⚖️', label: 'Contrastes y matices esenciales' },
+          { tipo: 'proceso', visual: 'ciclo', animacion: 'cascada', icono: '🔄', label: 'Ciclo de integración conceptual' },
+          { tipo: 'ejemplo', visual: 'mapa_mental', animacion: 'escala', icono: '💡', label: 'Aplicación práctica en el curso' },
+          { tipo: 'concepto', visual: 'piramide', animacion: 'maquina', icono: '🧩', label: 'Errores frecuentes que evitar' },
+          { tipo: 'ejemplo', visual: 'linea_tiempo', animacion: 'deslizar', icono: '📝', label: 'Guía de análisis en clase' },
+          { tipo: 'sintesis', visual: 'barras', animacion: 'revelar', icono: '✅', label: 'Síntesis final y puntos clave' }
+        ];
+
+        const enfoque = approach || 'Explicación profunda';
+        const escenas = blueprint.map((bp, idx) => {
+          const sA = sentences[idx % Math.max(1, sentences.length)] || `Este apartado analiza un principio esencial de ${title}.`;
+          const sB = sentences[(idx + 1) % Math.max(1, sentences.length)] || `Comprender esta conexión refuerza el dominio práctico en ${course}.`;
+          const narr = idx === 0
+            ? `Bienvenidos a esta lección sobre ${title}, preparada con un enfoque de ${enfoque.toLowerCase()}. En los próximos cinco minutos revisaremos su estructura general, conceptos esenciales, gráficas explicativas, comparaciones y ejemplos prácticos para consolidar el aprendizaje.`
+            : idx === blueprint.length - 1
+              ? `En síntesis, para dominar ${title} conviene recordar la definición precisa de sus pilares, la secuencia lógica que los relaciona y los criterios de aplicación práctica. Utiliza este esquema visual como guía de repaso para tu curso.`
+              : `${sA}. Asimismo, resulta clave observar cómo ${sB.charAt(0).toLowerCase() + sB.slice(1)}. Al representar esta idea de forma visual, es más fácil identificar causas, distinguir matices y retener la lógica del tema con claridad.`;
+
+          const shortTitle = (idx === 0 || idx === blueprint.length - 1)
+            ? bp.label
+            : (sentences[idx] ? sentences[idx].split(/\s+/).slice(0, 6).join(' ').replace(/[,:;]+$/, '') : bp.label);
+
+          return {
+            tipo: bp.tipo,
+            animacion: bp.animacion,
+            visual: bp.visual,
+            datos_visuales: [
+              { etiqueta: 'Fundamento', valor: 64 + ((idx * 7) % 30) },
+              { etiqueta: 'Estructura', valor: 58 + ((idx * 11) % 35) },
+              { etiqueta: 'Relación', valor: 72 + ((idx * 5) % 24) },
+              { etiqueta: 'Aplicación', valor: 78 + ((idx * 9) % 20) }
+            ],
+            duracion_seg: calcDurationSec(narr),
+            titulo_grafico: shortTitle || bp.label,
+            puntos_clave: [
+              sA.length > 56 ? `${sA.slice(0, 53)}…` : sA,
+              sB.length > 56 ? `${sB.slice(0, 53)}…` : sB
+            ],
+            icono: bp.icono,
+            narracion_es: narr
+          };
+        });
+
+        return { titulo_leccion: title, curso: course, escenas, fallback: true };
+      }
+
+      // --- Cliente API unificado (servidor Vercel/Neon/Gemini) ---
+      const Api = {
+        async getPublicConfig() {
+          const res = await fetch('/api/public-config', { credentials: 'same-origin' });
+          if (!res.ok) throw new Error('Error al cargar configuración pública.');
+          return res.json();
+        },
+        async trackMetric(event_type, metadata = {}) {
+          try {
+            await fetch('/api/metrics', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event_type, metadata })
+            });
+          } catch {}
+        },
+        async generateScript(payload) {
+          const res = await fetch('/api/generate-script', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'No se pudo generar el esquema.');
+          return data;
+        },
+        async generateAudio(text, overrides = {}) {
+          try {
+            const res = await fetch('/api/generate-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, ...overrides })
+            });
+            return res.json();
+          } catch {
+            return { fallback: true, reason: 'Sin conexión con Gemini TTS.' };
+          }
+        },
+        async validateCode(code) {
+          const res = await fetch('/api/validate-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+          });
+          return res.json();
+        },
+        async adminLogin(password) {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ password })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error de autenticación.');
+          return data;
+        },
+        async adminLogout() {
+          await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+          return { ok: true };
+        },
+        async getAdminConfig() {
+          const res = await fetch('/api/admin/config', { credentials: 'same-origin' });
+          if (!res.ok) throw new Error('Sesión expirada.');
+          return res.json();
+        },
+        async saveAdminConfig(payload) {
+          const res = await fetch('/api/admin/config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'No se pudo guardar.');
+          return data;
+        },
+        async changePassword(currentPassword, newPassword) {
+          const res = await fetch('/api/admin/password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ currentPassword, newPassword })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la contraseña.');
+          return data;
+        },
+        async testGemini(model, apiKey) {
+          const res = await fetch('/api/admin/test-gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ model, apiKey })
+          });
+          return res.json();
+        },
+        async getCodes() {
+          const res = await fetch('/api/admin/codes', { credentials: 'same-origin' });
+          if (!res.ok) throw new Error('Error al cargar códigos.');
+          return res.json();
+        },
+        async createCode(code, max_uses) {
+          const res = await fetch('/api/admin/codes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code, max_uses })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'No se pudo crear el código.');
+          return data;
+        },
+        async revokeCode(id) {
+          const res = await fetch(`/api/admin/codes/${id}`, { method: 'DELETE', credentials: 'same-origin' });
+          if (!res.ok) throw new Error('No se pudo revocar el código.');
+          return res.json();
+        },
+        async getMetrics() {
+          const res = await fetch('/api/admin/metrics', { credentials: 'same-origin' });
+          if (!res.ok) throw new Error('Error al cargar métricas.');
+          return res.json();
+        },
+        async resetMetrics() {
+          const res = await fetch('/api/admin/metrics/reset', { method: 'POST', credentials: 'same-origin' });
+          if (!res.ok) throw new Error('No se pudieron reiniciar las métricas.');
+          return res.json();
+        }
+      };
+
+      // --- Estado global ---
+      const state = {
+        view: 'app',
+        publicConfig: {
+          whatsapp_number: '50212345678',
+          whatsapp_template: 'Hola, acabo de crear un vídeo educativo para la lección «{app}» ({duracion}) en AulaVoz. ¿Podrías enviarme un código de descarga MP4?',
+          require_whatsapp_permission: true,
+          watermark_text: 'Creado con AulaVoz',
+          promo_banner_enabled: false,
+          promo_banner_text: '',
+          is_admin: false,
+          has_gemini_key: false
+        },
+        unlockedForSession: false,
+        paletteKey: 'purple',
+        visualStyle: 'editorial',
+        bgMusicEnabled: true,
+        showCaptions: false,
+        selectedVoiceName: 'Aoede',
+        script: null,
+        selectedSceneIndex: 0,
+        sceneAudioBuffers: {},
+        isPlaying: false,
+        playTimeSec: 0,
+        lastFrameTs: 0,
+        rafId: null,
+        lastSpokenSceneIdx: -1,
+        isSpeakingSceneIdx: -1,
+        speechStartedAtMs: 0,
+        isExporting: false,
+        exportCancelFlag: false,
+        isRecordingMic: false,
+        micRecorder: null,
+        micChunks: [],
+        audioCtx: null,
+        activeMusicNodes: null,
+        activeVoiceSource: null,
+        logoClicks: 0,
+        logoClickTimer: null,
+        resetConfirmArmed: false
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const canvas = $('videoCanvas');
+      const ctx = canvas.getContext('2d');
+
+      function showToast(message, type = 'info') {
+        const container = $('toastContainer');
+        const colors = {
+          info: 'bg-slate-900 text-white border-slate-700',
+          success: 'bg-emerald-600 text-white border-emerald-500',
+          error: 'bg-rose-600 text-white border-rose-500',
+          warning: 'bg-amber-500 text-slate-950 border-amber-400'
+        };
+        const el = document.createElement('div');
+        el.className = `toast-enter px-4 py-3 rounded-xl border text-xs sm:text-sm font-medium shadow-lg ${colors[type] || colors.info}`;
+        el.textContent = message;
+        container.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          el.style.transition = 'opacity 0.25s ease';
+          setTimeout(() => el.remove(), 260);
+        }, 3800);
+      }
+
+      function formatTime(sec) {
+        const s = Math.max(0, Math.floor(sec));
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+      }
+
+      function getTotalDuration() {
+        if (!state.script || !state.script.escenas.length) return 1;
+        return state.script.escenas.reduce((acc, sc) => acc + Math.max(3, Number(sc.duracion_seg) || 10), 0);
+      }
+
+      function getSceneAtTime(tSec) {
+        if (!state.script || !state.script.escenas.length) return { index: 0, localTime: 0, duration: 10, startTime: 0 };
+        let acc = 0;
+        for (let i = 0; i < state.script.escenas.length; i++) {
+          const dur = Math.max(3, Number(state.script.escenas[i].duracion_seg) || 10);
+          if (tSec < acc + dur || i === state.script.escenas.length - 1) {
+            return { index: i, localTime: Math.max(0, tSec - acc), duration: dur, startTime: acc };
+          }
+          acc += dur;
+        }
+        return { index: 0, localTime: 0, duration: 10, startTime: 0 };
+      }
+
+      function getSceneStartTime(index) {
+        if (!state.script) return 0;
+        let acc = 0;
+        for (let i = 0; i < index && i < state.script.escenas.length; i++) {
+          acc += Math.max(3, Number(state.script.escenas[i].duracion_seg) || 10);
+        }
+        return acc;
+      }
+
+      // --- Web Audio API sin bloqueos ---
+      function getAudioContextSync() {
+        if (!state.audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          state.audioCtx = new AudioCtx();
+        }
+        return state.audioCtx;
+      }
+
+      async function ensureAudioContext() {
+        const ctxAudio = getAudioContextSync();
+        if (ctxAudio.state === 'suspended') {
+          try {
+            await Promise.race([ctxAudio.resume(), new Promise((r) => setTimeout(r, 250))]);
+          } catch {}
+        }
+        return ctxAudio;
+      }
+
+      function pcm16ToWavBuffer(pcmBytes, sampleRate = 24000, numChannels = 1, bitsPerSample = 16) {
+        const dataSize = pcmBytes.byteLength;
+        const wav = new ArrayBuffer(44 + dataSize);
+        const view = new DataView(wav);
+        const writeStr = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + dataSize, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, numChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, (sampleRate * numChannels * bitsPerSample) / 8, true);
+        view.setUint16(32, (numChannels * bitsPerSample) / 8, true);
+        view.setUint16(34, bitsPerSample, true);
+        writeStr(36, 'data');
+        view.setUint32(40, dataSize, true);
+        new Uint8Array(wav, 44).set(pcmBytes);
+        return wav;
+      }
+
+      async function decodeBase64Audio(base64, mimeType) {
+        const audioCtx = getAudioContextSync();
+        const bin = atob(base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const mime = String(mimeType || '').toLowerCase();
+        const looksLikeMp3 = bytes.length > 3 && ((bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) || (bytes[0] === 0xFF && (bytes[1] & 0xE0) === 0xE0));
+        const looksLikeWav = bytes.length > 4 && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+
+        if (mime.includes('pcm') || mime.includes('l16') || (!looksLikeMp3 && !looksLikeWav)) {
+          try {
+            return await audioCtx.decodeAudioData(pcm16ToWavBuffer(bytes, 24000, 1, 16));
+          } catch {}
+        }
+        return audioCtx.decodeAudioData(bytes.buffer.slice(0));
+      }
+
+      function startAmbientMusic(audioCtx, destinationNode, gainLevel = 0.2) {
+        if (!state.bgMusicEnabled) return null;
+        const masterGain = audioCtx.createGain();
+        const now = audioCtx.currentTime;
+        masterGain.gain.setValueAtTime(0.001, now);
+        masterGain.gain.linearRampToValueAtTime(gainLevel, now + 0.6);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1350, now);
+        masterGain.connect(filter);
+        filter.connect(destinationNode);
+
+        const padFreqs = [220.0, 261.63, 329.63, 392.0];
+        const oscs = padFreqs.map((f, idx) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(f, now);
+          g.gain.setValueAtTime(idx === 0 ? 0.24 : 0.14, now);
+          osc.connect(g);
+          g.connect(masterGain);
+          osc.start(now);
+          return osc;
+        });
+
+        const notes = [440, 523.25, 659.25, 587.33, 523.25, 493.88, 392.0, 523.25];
+        let step = 0;
+        const playNote = () => {
+          try {
+            const t = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(notes[step % notes.length], t);
+            step += 1;
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.linearRampToValueAtTime(0.14, t + 0.05);
+            g.gain.exponentialRampToValueAtTime(0.0008, t + 0.9);
+            osc.connect(g);
+            g.connect(masterGain);
+            osc.start(t);
+            osc.stop(t + 0.95);
+          } catch {}
+        };
+        playNote();
+        const timerId = setInterval(playNote, 1100);
+
+        return {
+          stop() {
+            clearInterval(timerId);
+            try {
+              const t = audioCtx.currentTime;
+              masterGain.gain.cancelScheduledValues(t);
+              masterGain.gain.setValueAtTime(masterGain.gain.value, t);
+              masterGain.gain.linearRampToValueAtTime(0.0001, t + 0.2);
+              setTimeout(() => {
+                oscs.forEach((o) => { try { o.stop(); } catch {} });
+                try { masterGain.disconnect(); filter.disconnect(); } catch {}
+              }, 240);
+            } catch {}
+          }
+        };
+      }
+
+      function stopAllPreviewAudio() {
+        if (state.activeVoiceSource) {
+          try { state.activeVoiceSource.stop(); } catch {}
+          state.activeVoiceSource = null;
+        }
+        if (state.activeMusicNodes) {
+          state.activeMusicNodes.stop();
+          state.activeMusicNodes = null;
+        }
+        if ('speechSynthesis' in window) {
+          try { window.speechSynthesis.cancel(); } catch {}
+        }
+        state.isSpeakingSceneIdx = -1;
+      }
+
+      async function speakScenePreview(sceneIdx) {
+        if (!state.script || !state.script.escenas[sceneIdx]) return;
+        const scene = state.script.escenas[sceneIdx];
+        if (state.activeVoiceSource) { try { state.activeVoiceSource.stop(); } catch {} state.activeVoiceSource = null; }
+        if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch {} }
+
+        state.isSpeakingSceneIdx = sceneIdx;
+        state.speechStartedAtMs = performance.now();
+
+        const audioEntry = state.sceneAudioBuffers[sceneIdx];
+        if (audioEntry && audioEntry.buffer) {
+          const audioCtx = await ensureAudioContext();
+          const src = audioCtx.createBufferSource();
+          src.buffer = audioEntry.buffer;
+          src.connect(audioCtx.destination);
+          src.onended = () => { if (state.isSpeakingSceneIdx === sceneIdx) state.isSpeakingSceneIdx = -1; };
+          src.start();
+          state.activeVoiceSource = src;
+          return;
+        }
+
+        if ('speechSynthesis' in window) {
+          try {
+            const utter = new SpeechSynthesisUtterance(scene.narracion_es);
+            utter.lang = 'es-ES';
+            utter.rate = 0.98;
+            const voices = window.speechSynthesis.getVoices() || [];
+            const esVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('es'));
+            const wantsMale = ['Puck', 'Charon', 'Fenrir', 'Orus'].includes(state.selectedVoiceName || 'Aoede');
+            const maleHints = /(pablo|jorge|diego|raul|alvaro|carlos|tomas|juan|enrique|male|masculin)/i;
+            const femaleHints = /(helena|sabina|laura|monica|paulina|elvira|dalia|lucia|female|femenin)/i;
+            const matched = esVoices.find((v) => wantsMale ? maleHints.test(v.name) : femaleHints.test(v.name));
+            const esVoice = matched || esVoices[0];
+            if (esVoice) utter.voice = esVoice;
+            if (wantsMale && !matched) utter.pitch = 0.84;
+            utter.onend = () => {
+              const spokenSec = (performance.now() - state.speechStartedAtMs) / 1000;
+              if (state.script?.escenas?.[sceneIdx] && spokenSec > Number(state.script.escenas[sceneIdx].duracion_seg || 0)) {
+                state.script.escenas[sceneIdx].duracion_seg = Math.min(60, Math.ceil((spokenSec + 0.6) * 2) / 2);
+                renderSceneTabs();
+                if (state.selectedSceneIndex === sceneIdx) populateSceneEditor();
+                updateStudioMeta();
+              }
+              if (state.isSpeakingSceneIdx === sceneIdx) state.isSpeakingSceneIdx = -1;
+            };
+            utter.onerror = () => { if (state.isSpeakingSceneIdx === sceneIdx) state.isSpeakingSceneIdx = -1; };
+            window.speechSynthesis.speak(utter);
+          } catch {
+            state.isSpeakingSceneIdx = -1;
+          }
+        } else {
+          state.isSpeakingSceneIdx = -1;
+        }
+      }
+
+      // --- Motor gráfico 720p: 8 estilos + 5 movimientos de texto + 7 esquemas/gráficas educativas ---
+      function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
+      }
+
+      function wrapLines(c, text, maxWidth, maxLines = 3) {
+        const words = String(text || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let current = '';
+        for (const w of words) {
+          const test = current ? `${current} ${w}` : w;
+          if (c.measureText(test).width > maxWidth && current) {
+            lines.push(current);
+            current = w;
+            if (lines.length >= maxLines) break;
+          } else {
+            current = test;
+          }
+        }
+        if (current && lines.length < maxLines) lines.push(current);
+        return lines;
+      }
+
+      function easeOutCubic(x) {
+        const t = Math.min(1, Math.max(0, x));
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function getVisualTheme(pal, styleKey) {
+        if (styleKey === 'neobrutal') {
+          return { style: 'neobrutal', canvasBg: '#FFFBEB', cardBg: '#FFFFFF', cardAltBg: '#FEF08A', borderColor: '#0F172A', borderWidth: 3.5, radius: 6, hardShadow: true, titleFont: '900 38px Inter, sans-serif', headerFont: '900 24px Inter, sans-serif', bodyFont: '700 18px Inter, sans-serif', textColor: '#0F172A', mutedColor: '#1E293B', badgeBg: '#FDE047', badgeText: '#0F172A', trackBg: '#E2E8F0', accentFill: pal.primary, accentSoft: '#FEF08A' };
+        }
+        if (styleKey === 'darktech') {
+          return { style: 'darktech', canvasBg: '#0B1120', cardBg: '#1E293B', cardAltBg: '#0F172A', borderColor: '#334155', borderWidth: 1.5, radius: 18, hardShadow: false, titleFont: '800 38px Inter, sans-serif', headerFont: '800 24px Inter, sans-serif', bodyFont: '600 18px Inter, sans-serif', textColor: '#F8FAFC', mutedColor: '#94A3B8', badgeBg: 'rgba(59, 130, 246, 0.2)', badgeText: '#93C5FD', trackBg: '#1E293B', accentFill: pal.accent, accentSoft: 'rgba(56, 189, 248, 0.14)' };
+        }
+        if (styleKey === 'editorial') {
+          return { style: 'editorial', canvasBg: '#FAF8F5', cardBg: '#FFFFFF', cardAltBg: '#F5F0E8', borderColor: '#D6D3D1', borderWidth: 1.2, radius: 6, hardShadow: false, titleFont: "700 38px Georgia, 'Times New Roman', serif", headerFont: "700 23px Georgia, 'Times New Roman', serif", bodyFont: '500 18px Inter, sans-serif', textColor: '#1C1917', mutedColor: '#57534E', badgeBg: '#F5F0E8', badgeText: '#1C1917', trackBg: '#E7E5E4', accentFill: pal.primaryDark, accentSoft: '#F5F0E8' };
+        }
+        if (styleKey === 'glass') {
+          return { style: 'glass', canvasBg: '#EEF2FF', cardBg: 'rgba(255, 255, 255, 0.78)', cardAltBg: 'rgba(255, 255, 255, 0.56)', borderColor: 'rgba(255, 255, 255, 0.95)', borderWidth: 2, radius: 20, hardShadow: false, titleFont: '800 38px Inter, sans-serif', headerFont: '800 24px Inter, sans-serif', bodyFont: '600 18px Inter, sans-serif', textColor: '#0F172A', mutedColor: '#334155', badgeBg: 'rgba(255, 255, 255, 0.75)', badgeText: pal.primaryDark, trackBg: 'rgba(255, 255, 255, 0.65)', accentFill: pal.primary, accentSoft: 'rgba(255, 255, 255, 0.68)' };
+        }
+        if (styleKey === 'retro') {
+          return { style: 'retro', canvasBg: '#06110B', cardBg: '#0B1D13', cardAltBg: '#0F291B', borderColor: '#22C55E', borderWidth: 2, radius: 4, hardShadow: false, titleFont: "700 34px ui-monospace, Consolas, monospace", headerFont: "700 22px ui-monospace, Consolas, monospace", bodyFont: "600 16px ui-monospace, Consolas, monospace", textColor: '#DCFCE7', mutedColor: '#86EFAC', badgeBg: '#052E16', badgeText: '#4ADE80', trackBg: '#14532D', accentFill: '#22C55E', accentSoft: '#052E16' };
+        }
+        if (styleKey === 'swiss') {
+          return { style: 'swiss', canvasBg: '#FFFFFF', cardBg: '#FFFFFF', cardAltBg: '#F8FAFC', borderColor: '#0F172A', borderWidth: 1.5, radius: 0, hardShadow: false, titleFont: '900 38px Inter, Helvetica, Arial, sans-serif', headerFont: '900 23px Inter, Helvetica, Arial, sans-serif', bodyFont: '600 18px Inter, Helvetica, Arial, sans-serif', textColor: '#0F172A', mutedColor: '#334155', badgeBg: '#0F172A', badgeText: '#FFFFFF', trackBg: '#E2E8F0', accentFill: pal.primary, accentSoft: '#F1F5F9' };
+        }
+        if (styleKey === 'chalkboard') {
+          return { style: 'chalkboard', canvasBg: '#14332B', cardBg: 'rgba(255, 255, 255, 0.08)', cardAltBg: 'rgba(255, 255, 255, 0.12)', borderColor: 'rgba(248, 250, 252, 0.42)', borderWidth: 1.8, radius: 10, hardShadow: false, titleFont: "700 38px Georgia, 'Times New Roman', serif", headerFont: "700 23px Georgia, 'Times New Roman', serif", bodyFont: '500 18px Inter, sans-serif', textColor: '#F8FAFC', mutedColor: '#D1FAE5', badgeBg: 'rgba(253, 230, 138, 0.18)', badgeText: '#FDE68A', trackBg: 'rgba(255, 255, 255, 0.18)', accentFill: '#F59E0B', accentSoft: 'rgba(253, 230, 138, 0.15)' };
+        }
+        return { style: 'modern', canvasBg: '#FFFFFF', cardBg: '#FFFFFF', cardAltBg: pal.primarySoft, borderColor: '#E2E8F0', borderWidth: 1.5, radius: 14, hardShadow: false, titleFont: '800 38px Inter, sans-serif', headerFont: '800 24px Inter, sans-serif', bodyFont: '600 18px Inter, sans-serif', textColor: pal.text, mutedColor: pal.muted, badgeBg: pal.primarySoft, badgeText: pal.primaryDark, trackBg: '#E2E8F0', accentFill: pal.primary, accentSoft: pal.primarySoft };
+      }
+
+      function drawStyledBox(c, x, y, w, h, r, fill, theme, { shadowOffset = 5 } = {}) {
+        if (theme.hardShadow) {
+          c.fillStyle = '#0F172A';
+          roundRect(c, x + shadowOffset, y + shadowOffset, w, h, r);
+          c.fill();
+        }
+        c.fillStyle = fill;
+        roundRect(c, x, y, w, h, r);
+        c.fill();
+        c.strokeStyle = theme.borderColor;
+        c.lineWidth = theme.borderWidth;
+        roundRect(c, x, y, w, h, r);
+        c.stroke();
+      }
+
+      // 5 movimientos cinéticos de título
+      function drawAnimatedTitle(c, titleText, x, y, maxW, theme, animType, localTime) {
+        c.save();
+        c.fillStyle = theme.textColor;
+        c.font = theme.titleFont;
+        const lines = wrapLines(c, titleText, maxW, 2);
+
+        if (animType === 'maquina') {
+          const full = lines.join('\n');
+          const chars = Math.max(1, Math.floor(Math.min(1, localTime / 1.1) * full.length));
+          const shown = full.slice(0, chars).split('\n');
+          shown.forEach((line, i) => {
+            const cursor = (i === shown.length - 1 && chars < full.length && Math.floor(localTime * 6) % 2 === 0) ? '▌' : '';
+            c.fillText(line + cursor, x, y + i * 46);
+          });
+        } else if (animType === 'escala') {
+          const e = easeOutCubic(localTime / 0.55);
+          c.globalAlpha = e;
+          const sc = 0.86 + 0.14 * e;
+          c.translate(x, y);
+          c.scale(sc, sc);
+          lines.forEach((line, i) => c.fillText(line, 0, i * 46));
+        } else if (animType === 'cascada') {
+          let wordIndex = 0;
+          lines.forEach((line, li) => {
+            let curX = x;
+            line.split(/\s+/).forEach((word) => {
+              const we = easeOutCubic((localTime - wordIndex * 0.09) / 0.35);
+              c.save();
+              c.globalAlpha = we;
+              c.translate(0, (1 - we) * 16);
+              c.fillText(word, curX, y + li * 46);
+              c.restore();
+              curX += c.measureText(`${word} `).width;
+              wordIndex += 1;
+            });
+          });
+        } else if (animType === 'revelar') {
+          const e = easeOutCubic(localTime / 0.65);
+          c.beginPath();
+          c.rect(x - 4, y - 42, maxW + 16, Math.max(1, (lines.length * 48 + 14) * e));
+          c.clip();
+          lines.forEach((line, i) => c.fillText(line, x, y + i * 46));
+        } else {
+          // deslizar
+          const e = easeOutCubic(localTime / 0.55);
+          c.globalAlpha = e;
+          c.translate((1 - e) * -32, 0);
+          lines.forEach((line, i) => c.fillText(line, x, y + i * 46));
+        }
+        c.restore();
+        return lines.length;
+      }
+
+      // 7 motores de gráficas, esquemas e ilustraciones educativas
+      function drawEducationalVisual(c, scene, pal, theme, localTime) {
+        const vx = 720;
+        const vy = 114;
+        const vw = 496;
+        const vh = 416;
+        const entry = easeOutCubic(localTime / 0.65);
+        const boxR = theme.style === 'neobrutal' ? 6 : theme.style === 'editorial' ? 8 : 20;
+        const items = Array.isArray(scene.datos_visuales) && scene.datos_visuales.length
+          ? scene.datos_visuales.slice(0, 4)
+          : [{ etiqueta: 'Base', valor: 70 }, { etiqueta: 'Análisis', valor: 82 }, { etiqueta: 'Relación', valor: 76 }, { etiqueta: 'Síntesis', valor: 92 }];
+
+        c.save();
+        c.globalAlpha = entry;
+        c.translate(0, (1 - entry) * 20);
+        drawStyledBox(c, vx, vy, vw, vh, boxR, theme.cardBg, theme, { shadowOffset: 7 });
+
+        const visualType = scene.visual || 'mapa_mental';
+        const innerR = theme.style === 'neobrutal' ? 4 : theme.style === 'editorial' ? 6 : 12;
+
+        // Encabezado del diagrama
+        c.fillStyle = theme.mutedColor;
+        c.font = '700 13px Inter, sans-serif';
+        const visualTitles = {
+          mapa_mental: 'ESQUEMA · MAPA MENTAL',
+          barras: 'GRÁFICA COMPARATIVA',
+          linea_tiempo: 'SECUENCIA · LÍNEA DE TIEMPO',
+          comparativa: 'CUADRO COMPARATIVO',
+          ciclo: 'DIAGRAMA DE CICLO',
+          piramide: 'JERARQUÍA CONCEPTUAL',
+          ilustracion: 'ILUSTRACIÓN DIDÁCTICA'
+        };
+        c.fillText(visualTitles[visualType] || 'ESQUEMA VISUAL', vx + 24, vy + 32);
+
+        if (visualType === 'barras') {
+          const chartLeft = vx + 44;
+          const chartBottom = vy + vh - 58;
+          const chartH = 240;
+          c.strokeStyle = theme.borderColor;
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(chartLeft, vy + 66);
+          c.lineTo(chartLeft, chartBottom);
+          c.lineTo(vx + vw - 28, chartBottom);
+          c.stroke();
+
+          const barW = 72;
+          const gap = 28;
+          items.forEach((it, i) => {
+            const bx = chartLeft + 26 + i * (barW + gap);
+            const hRatio = Math.max(0.15, Math.min(1, (Number(it.valor) || 60) / 100));
+            const bh = chartH * hRatio * easeOutCubic((localTime - i * 0.12) / 0.7);
+            c.fillStyle = i % 2 === 0 ? theme.accentFill : pal.accent;
+            roundRect(c, bx, chartBottom - bh, barW, Math.max(10, bh), theme.style === 'neobrutal' ? 3 : 8);
+            c.fill();
+            if (theme.style === 'neobrutal') {
+              c.strokeStyle = '#0F172A';
+              c.lineWidth = 2.5;
+              c.stroke();
+            }
+            c.fillStyle = theme.textColor;
+            c.font = '700 14px Inter, sans-serif';
+            c.textAlign = 'center';
+            c.fillText(`${Math.round(it.valor)}%`, bx + barW / 2, chartBottom - bh - 10);
+            c.fillStyle = theme.mutedColor;
+            c.font = '600 12px Inter, sans-serif';
+            const lbl = it.etiqueta.length > 12 ? `${it.etiqueta.slice(0, 11)}…` : it.etiqueta;
+            c.fillText(lbl, bx + barW / 2, chartBottom + 22);
+            c.textAlign = 'left';
+          });
+        } else if (visualType === 'linea_tiempo') {
+          const lineX = vx + 62;
+          const topY = vy + 76;
+          const stepY = 82;
+          const prog = easeOutCubic(localTime / 0.9);
+          c.strokeStyle = theme.accentFill;
+          c.lineWidth = 4;
+          c.beginPath();
+          c.moveTo(lineX, topY);
+          c.lineTo(lineX, topY + (items.length - 1) * stepY * prog);
+          c.stroke();
+
+          items.forEach((it, i) => {
+            const ny = topY + i * stepY;
+            const e = easeOutCubic((localTime - i * 0.14) / 0.45);
+            c.save();
+            c.globalAlpha = entry * e;
+            c.fillStyle = theme.accentFill;
+            c.beginPath();
+            c.arc(lineX, ny, 15, 0, Math.PI * 2);
+            c.fill();
+            c.fillStyle = '#FFFFFF';
+            c.font = '700 14px Inter, sans-serif';
+            c.textAlign = 'center';
+            c.fillText(String(i + 1), lineX, ny + 5);
+            c.textAlign = 'left';
+
+            drawStyledBox(c, lineX + 32, ny - 24, vw - 120, 50, innerR, theme.cardAltBg, theme, { shadowOffset: 3 });
+            c.fillStyle = theme.textColor;
+            c.font = '700 16px Inter, sans-serif';
+            c.fillText(it.etiqueta, lineX + 48, ny + 6);
+            c.restore();
+          });
+        } else if (visualType === 'comparativa') {
+          const colW = (vw - 64) / 2;
+          const leftItems = items.slice(0, 2);
+          const rightItems = items.slice(2, 4);
+          [
+            { title: 'Enfoque A', x: vx + 24, list: leftItems, fill: theme.accentFill },
+            { title: 'Enfoque B', x: vx + 40 + colW, list: rightItems.length ? rightItems : leftItems, fill: pal.accent }
+          ].forEach((col, ci) => {
+            drawStyledBox(c, col.x, vy + 58, colW, 44, innerR, col.fill, theme, { shadowOffset: 3 });
+            c.fillStyle = '#FFFFFF';
+            c.font = '700 16px Inter, sans-serif';
+            c.textAlign = 'center';
+            c.fillText(col.title, col.x + colW / 2, vy + 86);
+            c.textAlign = 'left';
+
+            col.list.forEach((it, ri) => {
+              const ry = vy + 122 + ri * 126;
+              drawStyledBox(c, col.x, ry, colW, 108, innerR, theme.cardAltBg, theme, { shadowOffset: 3 });
+              c.fillStyle = theme.textColor;
+              c.font = '700 15px Inter, sans-serif';
+              const lns = wrapLines(c, it.etiqueta, colW - 28, 2);
+              lns.forEach((l, li) => c.fillText(l, col.x + 14, ry + 34 + li * 22));
+              c.fillStyle = theme.mutedColor;
+              c.font = '600 13px Inter, sans-serif';
+              c.fillText(`Relevancia: ${Math.round(it.valor)} %`, col.x + 14, ry + 88);
+            });
+          });
+        } else if (visualType === 'ciclo') {
+          const cx = vx + vw / 2;
+          const cy = vy + vh / 2 + 12;
+          const rad = 112;
+          c.strokeStyle = theme.accentFill;
+          c.lineWidth = 4;
+          c.setLineDash([8, 6]);
+          c.beginPath();
+          c.arc(cx, cy, rad, 0, Math.PI * 2 * easeOutCubic(localTime / 0.8));
+          c.stroke();
+          c.setLineDash([]);
+
+          // Nodo central
+          drawStyledBox(c, cx - 44, cy - 26, 88, 52, innerR, theme.accentSoft, theme, { shadowOffset: 3 });
+          c.font = '28px Inter, sans-serif';
+          c.textAlign = 'center';
+          c.fillText(scene.icono || '🔄', cx, cy + 10);
+
+          const angles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+          items.forEach((it, i) => {
+            const ang = angles[i % 4];
+            const nx = cx + Math.cos(ang) * (rad + 22);
+            const ny = cy + Math.sin(ang) * (rad + 14);
+            const nw = 152;
+            const nh = 44;
+            drawStyledBox(c, nx - nw / 2, ny - nh / 2, nw, nh, innerR, theme.cardAltBg, theme, { shadowOffset: 3 });
+            c.fillStyle = theme.textColor;
+            c.font = '700 13px Inter, sans-serif';
+            const lbl = it.etiqueta.length > 18 ? `${it.etiqueta.slice(0, 17)}…` : it.etiqueta;
+            c.fillText(`${i + 1}. ${lbl}`, nx, ny + 5);
+          });
+          c.textAlign = 'left';
+        } else if (visualType === 'piramide') {
+          const baseW = 400;
+          const tierH = 66;
+          const startY = vy + 76;
+          items.forEach((it, i) => {
+            const e = easeOutCubic((localTime - i * 0.14) / 0.45);
+            const w = 160 + (i / Math.max(1, items.length - 1)) * (baseW - 160);
+            const x = vx + (vw - w) / 2;
+            const y = startY + i * (tierH + 12);
+            c.save();
+            c.globalAlpha = entry * e;
+            drawStyledBox(c, x, y, w, tierH, innerR, i === 0 ? theme.accentFill : theme.cardAltBg, theme, { shadowOffset: 4 });
+            c.fillStyle = i === 0 ? '#FFFFFF' : theme.textColor;
+            c.font = '700 16px Inter, sans-serif';
+            c.textAlign = 'center';
+            c.fillText(`${i + 1}. ${it.etiqueta}`, vx + vw / 2, y + 39);
+            c.textAlign = 'left';
+            c.restore();
+          });
+        } else if (visualType === 'ilustracion') {
+          const cx = vx + vw / 2;
+          const cy = vy + 206;
+          const rot = localTime * 0.45;
+
+          c.strokeStyle = theme.accentFill;
+          c.lineWidth = 2;
+          for (let r = 0; r < 3; r++) {
+            c.save();
+            c.translate(cx, cy);
+            c.rotate(rot + (r * Math.PI) / 3);
+            c.beginPath();
+            c.ellipse(0, 0, 145, 56, 0, 0, Math.PI * 2);
+            c.stroke();
+            c.restore();
+          }
+
+          drawStyledBox(c, cx - 54, cy - 54, 108, 108, 54, theme.accentSoft, theme, { shadowOffset: 4 });
+          c.font = '50px Inter, sans-serif';
+          c.textAlign = 'center';
+          c.fillText(scene.icono || '🎓', cx, cy + 18);
+
+          drawStyledBox(c, vx + 36, vy + vh - 86, vw - 72, 56, innerR, theme.accentFill, theme, { shadowOffset: 4 });
+          c.fillStyle = '#FFFFFF';
+          c.font = '700 16px Inter, sans-serif';
+          const cap = state.script?.curso || 'Síntesis del curso';
+          c.fillText(cap.length > 44 ? `${cap.slice(0, 41)}…` : cap, cx, vy + vh - 52);
+          c.textAlign = 'left';
+        } else {
+          // mapa_mental (predeterminado)
+          const cx = vx + vw / 2;
+          const cy = vy + vh / 2 + 12;
+          const coords = [
+            { x: vx + 112, y: vy + 114 },
+            { x: vx + vw - 112, y: vy + 114 },
+            { x: vx + 112, y: vy + vh - 86 },
+            { x: vx + vw - 112, y: vy + vh - 86 }
+          ];
+          c.strokeStyle = theme.accentFill;
+          c.lineWidth = 3;
+          items.forEach((_, i) => {
+            const pt = coords[i % 4];
+            c.beginPath();
+            c.moveTo(cx, cy);
+            c.quadraticCurveTo(cx, pt.y, pt.x, pt.y);
+            c.stroke();
+          });
+
+          drawStyledBox(c, cx - 78, cy - 34, 156, 68, innerR, theme.accentFill, theme, { shadowOffset: 4 });
+          c.fillStyle = '#FFFFFF';
+          c.font = '700 15px Inter, sans-serif';
+          c.textAlign = 'center';
+          c.fillText(SCENE_TYPE_LABELS[scene.tipo] || 'Concepto', cx, cy + 6);
+
+          items.forEach((it, i) => {
+            const pt = coords[i % 4];
+            const nw = 178;
+            const nh = 50;
+            drawStyledBox(c, pt.x - nw / 2, pt.y - nh / 2, nw, nh, innerR, theme.cardAltBg, theme, { shadowOffset: 3 });
+            c.fillStyle = theme.textColor;
+            c.font = '700 13px Inter, sans-serif';
+            const lbl = it.etiqueta.length > 20 ? `${it.etiqueta.slice(0, 19)}…` : it.etiqueta;
+            c.fillText(lbl, pt.x, pt.y + 5);
+          });
+          c.textAlign = 'left';
+        }
+
+        c.restore();
+      }
+
+      function renderCanvasFrame(tSec, { hideWatermark = false } = {}) {
+        const pal = PALETTES[state.paletteKey] || PALETTES.purple;
+        const theme = getVisualTheme(pal, state.visualStyle || 'editorial');
+        const totalDur = getTotalDuration();
+        const clampedT = Math.min(totalDur, Math.max(0, tSec));
+        const { index, localTime: rawLocalTime } = getSceneAtTime(clampedT);
+        const localTime = (!state.isPlaying && !state.isExporting && rawLocalTime < 0.05) ? 1.4 : rawLocalTime;
+        const scene = state.script?.escenas?.[index] || {
+          tipo: 'apertura', animacion: 'revelar', visual: 'mapa_mental', datos_visuales: [],
+          duracion_seg: 20, titulo_grafico: 'Esquema visual de la lección',
+          puntos_clave: ['Explicación clara paso a paso', 'Síntesis para el curso'], icono: '🎓', narracion_es: ''
+        };
+
+        // 1. Fondo por estilo visual
+        ctx.fillStyle = theme.canvasBg;
+        ctx.fillRect(0, 0, 1280, 720);
+        const drift = Math.sin(clampedT * 0.55) * 16;
+
+        ctx.save();
+        if (theme.style === 'neobrutal') {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.10)';
+          for (let gx = 32; gx < 1280; gx += 44) for (let gy = 32; gy < 720; gy += 44) { ctx.beginPath(); ctx.arc(gx, gy, 2, 0, Math.PI * 2); ctx.fill(); }
+          ctx.fillStyle = '#FDE047'; ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 3.5;
+          ctx.fillRect(1145 + drift * 0.4, 22, 106, 106); ctx.strokeRect(1145 + drift * 0.4, 22, 106, 106);
+        } else if (theme.style === 'darktech') {
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.07)'; ctx.lineWidth = 1;
+          for (let gx = 0; gx < 1280; gx += 64) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, 720); ctx.stroke(); }
+          for (let gy = 0; gy < 720; gy += 64) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(1280, gy); ctx.stroke(); }
+          const grad = ctx.createRadialGradient(1040 + drift, 140, 20, 1040 + drift, 140, 340);
+          grad.addColorStop(0, 'rgba(37, 99, 235, 0.28)'); grad.addColorStop(1, 'rgba(11, 17, 32, 0)');
+          ctx.fillStyle = grad; ctx.fillRect(0, 0, 1280, 720);
+        } else if (theme.style === 'editorial') {
+          ctx.strokeStyle = '#D6D3D1'; ctx.lineWidth = 1.2;
+          ctx.beginPath(); ctx.moveTo(64, 96); ctx.lineTo(1216, 96); ctx.moveTo(64, 650); ctx.lineTo(1216, 650); ctx.stroke();
+        } else if (theme.style === 'glass') {
+          const grad = ctx.createLinearGradient(0, 0, 1280, 720);
+          grad.addColorStop(0, '#E0E7FF'); grad.addColorStop(0.5, '#FDF2F8'); grad.addColorStop(1, '#ECFEFF');
+          ctx.fillStyle = grad; ctx.fillRect(0, 0, 1280, 720);
+        } else if (theme.style === 'retro') {
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.06)';
+          for (let sy = 0; sy < 720; sy += 6) ctx.fillRect(0, sy, 1280, 2);
+          ctx.strokeStyle = 'rgba(34, 197, 94, 0.35)'; ctx.lineWidth = 2; ctx.strokeRect(20, 20, 1240, 680);
+        } else if (theme.style === 'swiss') {
+          ctx.fillStyle = pal.primary; ctx.fillRect(0, 0, 22, 720);
+          ctx.strokeStyle = '#0F172A'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(64, 96); ctx.lineTo(1216, 96); ctx.stroke();
+        } else if (theme.style === 'chalkboard') {
+          ctx.strokeStyle = 'rgba(253, 230, 138, 0.28)'; ctx.lineWidth = 3; ctx.setLineDash([12, 8]);
+          roundRect(ctx, 22, 22, 1236, 676, 16); ctx.stroke(); ctx.setLineDash([]);
+        } else {
+          ctx.fillStyle = pal.primarySoft;
+          ctx.beginPath(); ctx.arc(1140 + drift, 110 - drift * 0.4, 240, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(130 - drift * 0.5, 620 + drift * 0.3, 190, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+
+        // 2. Encabezado académico
+        drawStyledBox(ctx, 64, 38, 44, 44, theme.style === 'neobrutal' ? 4 : 12, theme.accentFill, theme, { shadowOffset: 4 });
+        ctx.fillStyle = '#FFFFFF'; ctx.font = '700 20px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🎓', 86, 67); ctx.textAlign = 'left';
+
+        ctx.fillStyle = theme.textColor; ctx.font = theme.headerFont;
+        const headerTitle = state.script?.titulo_leccion || 'AulaVoz';
+        ctx.fillText(headerTitle.length > 44 ? `${headerTitle.slice(0, 41)}…` : headerTitle, 122, 68);
+
+        const rawBadge = `${SCENE_TYPE_LABELS[scene.tipo] || 'Bloque'} · ${index + 1}/${state.script?.escenas?.length || 1}`;
+        const badgeLabel = theme.style === 'neobrutal' ? rawBadge.toUpperCase() : rawBadge;
+        ctx.font = '700 14px Inter, sans-serif';
+        const bw = ctx.measureText(badgeLabel).width + 30;
+        drawStyledBox(ctx, 1216 - bw, 42, bw, 36, theme.style === 'neobrutal' ? 4 : 18, theme.badgeBg, theme, { shadowOffset: 4 });
+        ctx.fillStyle = theme.badgeText;
+        ctx.fillText(badgeLabel, 1216 - bw + 15, 65);
+
+        // 3. Columna izquierda: icono + título con movimiento variado + puntos clave
+        drawStyledBox(ctx, 64, 114, 64, 64, theme.style === 'neobrutal' ? 4 : 16, theme.accentSoft, theme, { shadowOffset: 5 });
+        ctx.font = '34px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(scene.icono || '📘', 96, 158); ctx.textAlign = 'left';
+
+        const titleLineCount = drawAnimatedTitle(ctx, scene.titulo_grafico, 64, 224, 616, theme, scene.animacion || 'deslizar', localTime);
+
+        const bulletsStartY = 224 + titleLineCount * 46 + 22;
+        const bullets = Array.isArray(scene.puntos_clave) ? scene.puntos_clave.slice(0, 3) : [];
+        bullets.forEach((bullet, idx) => {
+          const bEase = easeOutCubic((localTime - 0.28 - idx * 0.2) / 0.45);
+          if (bEase <= 0.01) return;
+          const by = bulletsStartY + idx * 64;
+          ctx.save();
+          ctx.globalAlpha = bEase;
+          ctx.translate((1 - bEase) * -20, 0);
+          drawStyledBox(ctx, 64, by, 616, 52, theme.radius, theme.cardBg, theme, { shadowOffset: 5 });
+          ctx.fillStyle = theme.accentFill;
+          ctx.beginPath(); ctx.arc(90, by + 26, 11, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#FFFFFF'; ctx.font = '700 13px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(idx + 1), 90, by + 31); ctx.textAlign = 'left';
+          ctx.fillStyle = theme.textColor; ctx.font = theme.bodyFont;
+          const shortB = bullet.length > 52 ? `${bullet.slice(0, 49)}…` : bullet;
+          ctx.fillText(shortB, 114, by + 33);
+          ctx.restore();
+        });
+
+        // 4. Columna derecha: gráfica / esquema / ilustración educativa
+        drawEducationalVisual(ctx, scene, pal, theme, localTime);
+
+        // 5. Panel de narración aparte debajo del lienzo
+        const narrLabelEl = $('narrationPanelLabel');
+        const narrTextEl = $('narrationPanelText');
+        if (narrLabelEl && narrTextEl) {
+          narrLabelEl.textContent = `Narración · Escena ${index + 1} (${SCENE_TYPE_LABELS[scene.tipo] || scene.tipo})`;
+          narrTextEl.textContent = scene.narracion_es || '';
+        }
+
+        if (state.showCaptions && scene.narracion_es) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+          roundRect(ctx, 64, 576, 1152, 74, theme.style === 'neobrutal' ? 4 : 14);
+          ctx.fill();
+          ctx.fillStyle = '#F8FAFC'; ctx.font = '500 19px Inter, sans-serif'; ctx.textAlign = 'center';
+          const subLines = wrapLines(ctx, scene.narracion_es, 1080, 2);
+          const subY = subLines.length === 1 ? 619 : 606;
+          subLines.forEach((l, i) => ctx.fillText(l, 640, subY + i * 26));
+          ctx.textAlign = 'left';
+        }
+
+        // 6. Barra de progreso 720p
+        const progress = totalDur > 0 ? clampedT / totalDur : 0;
+        ctx.fillStyle = theme.trackBg; roundRect(ctx, 64, 674, 980, 12, theme.style === 'neobrutal' ? 3 : 6); ctx.fill();
+        ctx.fillStyle = theme.accentFill; roundRect(ctx, 64, 674, Math.max(12, 980 * progress), 12, theme.style === 'neobrutal' ? 3 : 6); ctx.fill();
+        ctx.fillStyle = theme.mutedColor; ctx.font = '700 16px Inter, sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(`${formatTime(clampedT)} / ${formatTime(totalDur)}`, 1216, 686); ctx.textAlign = 'left';
+
+        const showWatermark = !hideWatermark && !state.publicConfig.is_admin && state.publicConfig.watermark_text;
+        if (showWatermark) {
+          ctx.fillStyle = ['darktech', 'retro', 'chalkboard'].includes(theme.style) ? 'rgba(248, 250, 252, 0.48)' : 'rgba(15, 23, 42, 0.42)';
+          ctx.font = '600 14px Inter, sans-serif'; ctx.textAlign = 'right';
+          ctx.fillText(state.publicConfig.watermark_text, 1216, state.showCaptions ? 564 : 656); ctx.textAlign = 'left';
+        }
+      }
+
+      // --- Reproducción ---
+      function updateTimelineUI() {
+        const total = getTotalDuration();
+        $('timeElapsedLabel').textContent = formatTime(state.playTimeSec);
+        $('timeTotalLabel').textContent = formatTime(total);
+        $('timelineScrubber').value = String(Math.round((state.playTimeSec / Math.max(0.1, total)) * 1000));
+        $('playPauseIcon').textContent = state.isPlaying ? '⏸' : '▶';
+        $('playPauseText').textContent = state.isPlaying ? 'Pausar' : 'Reproducir';
+      }
+
+      function animationStep(ts) {
+        if (!state.isPlaying) return;
+        if (!state.lastFrameTs) state.lastFrameTs = ts;
+        const dt = Math.min(0.1, (ts - state.lastFrameTs) / 1000);
+        state.lastFrameTs = ts;
+
+        const curInfo = getSceneAtTime(state.playTimeSec);
+        const sceneEndTime = curInfo.startTime + curInfo.duration;
+        const nextTime = state.playTimeSec + dt;
+
+        if (state.isSpeakingSceneIdx === curInfo.index && nextTime >= sceneEndTime - 0.05) {
+          const curScene = state.script?.escenas?.[curInfo.index];
+          if (curScene && Number(curScene.duracion_seg) < 60) {
+            curScene.duracion_seg = Math.min(60, Math.round((Number(curScene.duracion_seg) + dt) * 10) / 10);
+            updateStudioMeta();
+          }
+        }
+        state.playTimeSec = nextTime;
+
+        const total = getTotalDuration();
+        if (state.playTimeSec >= total) {
+          state.playTimeSec = total;
+          renderCanvasFrame(state.playTimeSec);
+          updateTimelineUI();
+          pausePlayback();
+          return;
+        }
+
+        const { index } = getSceneAtTime(state.playTimeSec);
+        if (index !== state.lastSpokenSceneIdx) {
+          state.lastSpokenSceneIdx = index;
+          state.selectedSceneIndex = index;
+          renderSceneTabs();
+          populateSceneEditor();
+          speakScenePreview(index);
+        }
+
+        renderCanvasFrame(state.playTimeSec);
+        updateTimelineUI();
+        state.rafId = requestAnimationFrame(animationStep);
+      }
+
+      async function startPlayback() {
+        if (state.isExporting) return;
+        if (state.playTimeSec >= getTotalDuration() - 0.1) state.playTimeSec = 0;
+        state.isPlaying = true;
+        state.lastFrameTs = 0;
+        state.lastSpokenSceneIdx = -1;
+        const audioCtx = await ensureAudioContext();
+        if (state.bgMusicEnabled) state.activeMusicNodes = startAmbientMusic(audioCtx, audioCtx.destination, 0.12);
+        updateTimelineUI();
+        if (state.rafId) cancelAnimationFrame(state.rafId);
+        state.rafId = requestAnimationFrame(animationStep);
+      }
+
+      function pausePlayback() {
+        state.isPlaying = false;
+        if (state.rafId) { cancelAnimationFrame(state.rafId); state.rafId = null; }
+        stopAllPreviewAudio();
+        updateTimelineUI();
+      }
+
+      // --- Exportación real 720p MP4/WebM con audio ---
+      async function runRealVideoExport() {
+        if (state.isExporting) return;
+        if (typeof MediaRecorder === 'undefined' || !canvas.captureStream) {
+          showToast('Tu navegador no soporta MediaRecorder para exportar vídeo.', 'error');
+          return;
+        }
+        pausePlayback();
+        state.isExporting = true;
+        state.exportCancelFlag = false;
+
+        const mimeCandidates = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+        const chosenMime = mimeCandidates.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+        const ext = chosenMime.includes('mp4') ? 'mp4' : 'webm';
+
+        $('exportProgressBox').classList.remove('hidden');
+        $('exportStatusText').textContent = `Renderizando vídeo 720p (.${ext}) con audio…`;
+        $('exportFormatHint').textContent = `Resolución 1280 × 720 (720p) a 30 fps · ${ext.toUpperCase()}`;
+        $('exportPctLabel').textContent = '0 %';
+        $('exportProgressBar').style.width = '0%';
+
+        if (state.publicConfig.has_gemini_key) {
+          for (let i = 0; i < state.script.escenas.length; i++) {
+            if (state.exportCancelFlag) break;
+            if (!state.sceneAudioBuffers[i]) {
+              $('exportStatusText').textContent = `Sintetizando voz de escena ${i + 1} de ${state.script.escenas.length}…`;
+              await synthesizeSceneAudio(i, { showError: true });
+              if (i < state.script.escenas.length - 1) await new Promise((r) => setTimeout(r, 450));
+            }
+          }
+          renderSceneTabs();
+          updateStudioMeta();
+        }
+
+        const audioCtx = await ensureAudioContext();
+        const dest = audioCtx.createMediaStreamDestination();
+        const voiceCount = Object.keys(state.sceneAudioBuffers).length;
+        const music = startAmbientMusic(audioCtx, dest, voiceCount > 0 ? 0.08 : 0.22);
+
+        const scheduledSources = [];
+        const baseAudioTime = audioCtx.currentTime + 0.12;
+        let offset = 0;
+        for (let i = 0; i < state.script.escenas.length; i++) {
+          const dur = Math.max(3, Number(state.script.escenas[i].duracion_seg) || 10);
+          const entry = state.sceneAudioBuffers[i];
+          if (entry && entry.buffer) {
+            const g = audioCtx.createGain();
+            g.gain.value = 1.0;
+            const src = audioCtx.createBufferSource();
+            src.buffer = entry.buffer;
+            src.connect(g);
+            g.connect(dest);
+            src.start(baseAudioTime + offset);
+            scheduledSources.push(src);
+          }
+          offset += dur;
+        }
+
+        const keepAliveGain = audioCtx.createGain();
+        keepAliveGain.gain.value = 0.0001;
+        const keepAliveOsc = audioCtx.createOscillator();
+        keepAliveOsc.connect(keepAliveGain);
+        keepAliveGain.connect(dest);
+        keepAliveOsc.start();
+
+        const videoStream = canvas.captureStream(30);
+        const combinedStream = new MediaStream([...videoStream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+        const chunks = [];
+        const recorder = chosenMime
+          ? new MediaRecorder(combinedStream, { mimeType: chosenMime, videoBitsPerSecond: 4000000, audioBitsPerSecond: 128000 })
+          : new MediaRecorder(combinedStream);
+
+        recorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) chunks.push(ev.data); };
+        const exportDone = new Promise((resolve) => { recorder.onstop = () => resolve(); });
+        recorder.start(250);
+
+        const totalDur = getTotalDuration();
+        const startPerf = performance.now();
+        await new Promise((resolve) => {
+          function tickExport() {
+            if (state.exportCancelFlag) { resolve(); return; }
+            const elapsed = (performance.now() - startPerf) / 1000;
+            const t = Math.min(totalDur, elapsed);
+            renderCanvasFrame(t, { hideWatermark: state.publicConfig.is_admin });
+            const pct = Math.min(100, Math.round((t / Math.max(0.1, totalDur)) * 100));
+            $('exportPctLabel').textContent = `${pct} %`;
+            $('exportProgressBar').style.width = `${pct}%`;
+            if (elapsed >= totalDur) { resolve(); return; }
+            requestAnimationFrame(tickExport);
+          }
+          requestAnimationFrame(tickExport);
+        });
+
+        try { recorder.stop(); } catch {}
+        await exportDone;
+        if (music) music.stop();
+        scheduledSources.forEach((s) => { try { s.stop(); } catch {} });
+        try { keepAliveOsc.stop(); } catch {}
+
+        $('exportProgressBox').classList.add('hidden');
+        const wasCancelled = state.exportCancelFlag;
+        state.isExporting = false;
+        renderCanvasFrame(state.playTimeSec);
+        if (wasCancelled) { showToast('Exportación cancelada.', 'warning'); return; }
+
+        const blob = new Blob(chunks, { type: chosenMime || 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const safeName = (state.script?.titulo_leccion || 'aulavoz-leccion').toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+        a.href = url;
+        a.download = `${safeName || 'aulavoz'}-720p.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+        await Api.trackMetric('mp4_exported', { format: ext, admin: state.publicConfig.is_admin });
+        showToast(`Vídeo educativo 720p exportado (.${ext}).`, 'success');
+      }
+
+      // --- UI helpers ---
+      function updatePublicConfigUI() {
+        const cfg = state.publicConfig;
+        if (cfg.promo_banner_enabled && cfg.promo_banner_text) {
+          $('promoBannerText').textContent = cfg.promo_banner_text;
+          $('promoBanner').classList.remove('hidden');
+        } else {
+          $('promoBanner').classList.add('hidden');
+        }
+        $('adminTopBar').classList.toggle('hidden', !cfg.is_admin);
+
+        if (cfg.is_admin) {
+          $('exportBtnIcon').textContent = '✨';
+          $('exportBtnLabel').textContent = 'Descargar MP4 720p sin marca de agua · Acceso admin';
+          $('exportMp4Btn').className = 'w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm sm:text-base shadow-sm transition flex items-center justify-center gap-2';
+        } else if (cfg.require_whatsapp_permission && !state.unlockedForSession) {
+          $('exportBtnIcon').textContent = '🔒';
+          $('exportBtnLabel').textContent = 'Descargar vídeo educativo MP4 720p (con audio)';
+          $('exportMp4Btn').className = 'w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base shadow-sm transition flex items-center justify-center gap-2';
+        } else {
+          $('exportBtnIcon').textContent = '⬇️';
+          $('exportBtnLabel').textContent = 'Descargar vídeo educativo MP4 720p (con audio)';
+          $('exportMp4Btn').className = 'w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm sm:text-base shadow-sm transition flex items-center justify-center gap-2';
+        }
+
+        if (STANDALONE_PREVIEW) {
+          $('engineStatusText').textContent = cfg.has_gemini_key ? 'Google Gemini activo' : 'Vista previa local';
+        } else if (cfg.has_gemini_key) {
+          $('engineStatusText').textContent = 'Google Gemini + Neon activos';
+        } else {
+          $('engineStatusText').textContent = 'Neon activo · Sin clave Gemini';
+        }
+        renderCanvasFrame(state.playTimeSec);
+      }
+
+      function updateStudioMeta() {
+        const count = state.script?.escenas?.length || 0;
+        const total = Math.round(getTotalDuration());
+        $('studioMetaLine').textContent = `Resolución 1280 × 720 (720p) · ${count} escenas · ${formatTime(total)} totales`;
+        const audioCount = Object.keys(state.sceneAudioBuffers).length;
+        $('audioEngineBadge').textContent = audioCount > 0
+          ? `🔊 ${audioCount}/${count} escenas con voz grabada/TTS`
+          : '🔊 Vista previa con voz · Música lista';
+        $('exportAudioHint').textContent = audioCount === count && count > 0
+          ? 'Listo: todas las escenas tienen voz real lista para el vídeo 720p.'
+          : 'El archivo 720p incluye música ambiental. Para voz narrada en el MP4, guarda tu clave de Google Gemini en Administración o usa «Grabar mi voz».';
+        updateTimelineUI();
+      }
+
+      function renderSceneTabs() {
+        const container = $('sceneTabs');
+        container.innerHTML = '';
+        if (!state.script) return;
+        state.script.escenas.forEach((sc, idx) => {
+          const active = idx === state.selectedSceneIndex;
+          const hasAudio = Boolean(state.sceneAudioBuffers[idx]);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = active
+            ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-xs transition inline-flex items-center gap-1.5'
+            : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:border-blue-400 transition inline-flex items-center gap-1.5';
+          btn.innerHTML = `<span>${sc.icono || '📘'}</span><span>${idx + 1}. ${SCENE_TYPE_LABELS[sc.tipo] || sc.tipo} · ${Number(sc.duracion_seg).toFixed(sc.duracion_seg % 1 ? 1 : 0)} s</span>${hasAudio ? '<span title="Audio listo">●</span>' : ''}`;
+          btn.addEventListener('click', () => {
+            state.selectedSceneIndex = idx;
+            state.playTimeSec = getSceneStartTime(idx);
+            renderSceneTabs();
+            populateSceneEditor();
+            renderCanvasFrame(state.playTimeSec);
+            updateTimelineUI();
+          });
+          container.appendChild(btn);
+        });
+      }
+
+      function populateSceneEditor() {
+        const sc = state.script?.escenas?.[state.selectedSceneIndex];
+        if (!sc) return;
+        $('editSceneType').value = sc.tipo || 'concepto';
+        $('editSceneVisual').value = sc.visual || 'mapa_mental';
+        $('editSceneAnim').value = sc.animacion || 'deslizar';
+        $('editSceneIcon').value = sc.icono || '📘';
+        $('editSceneTitle').value = sc.titulo_grafico || '';
+        $('editSceneBullets').value = (sc.puntos_clave || []).join('\n');
+        $('editSceneNarration').value = sc.narracion_es || '';
+        const durVal = Math.max(3, Math.min(60, Number(sc.duracion_seg) || 18));
+        $('editSceneDurationMeta').textContent = `Duración: ${durVal.toFixed(durVal % 1 ? 1 : 0)} s`;
+        $('editSceneDuration').value = String(durVal);
+        $('editSceneDurationRange').value = String(Math.min(45, durVal));
+        const audioEntry = state.sceneAudioBuffers[state.selectedSceneIndex];
+        $('clearVoiceBtn').classList.toggle('hidden', !(audioEntry && audioEntry.source === 'mic'));
+      }
+
+      function applyScript(scriptObj, resetAudio = true) {
+        state.script = scriptObj;
+        state.selectedSceneIndex = 0;
+        state.playTimeSec = 0;
+        if (resetAudio) state.sceneAudioBuffers = {};
+        renderSceneTabs();
+        populateSceneEditor();
+        updateStudioMeta();
+        renderCanvasFrame(0);
+      }
+
+      async function synthesizeSceneAudio(idx, { showError = false } = {}) {
+        const sc = state.script?.escenas?.[idx];
+        if (!sc) return false;
+        const res = await Api.generateAudio(sc.narracion_es);
+        if (!res.fallback && res.audioBase64) {
+          try {
+            const buf = await decodeBase64Audio(res.audioBase64, res.mimeType);
+            state.sceneAudioBuffers[idx] = { buffer: buf, source: 'gemini', voice: res.voice || '' };
+            if (!sc.duracion_manual) sc.duracion_seg = Math.max(5, Math.ceil((buf.duration + 0.8) * 2) / 2);
+            return true;
+          } catch (decErr) {
+            if (showError) showToast(`Error al decodificar audio: ${decErr.message}`, 'error');
+            return false;
+          }
+        }
+        if (showError && res.reason) showToast(res.reason, 'warning');
+        return false;
+      }
+
+      async function handleGenerateSubmit(ev) {
+        ev.preventDefault();
+        pausePlayback();
+        try { getAudioContextSync().resume(); } catch {}
+
+        const lessonTitle = $('lessonTitleInput').value.trim();
+        const content = $('lessonContentInput').value.trim();
+        const courseLabel = $('courseLabelInput').value.trim();
+        const approach = $('approachSelect').value;
+
+        if (!lessonTitle || content.length < 20) {
+          showToast('Escribe el título de la lección y un contenido más amplio.', 'warning');
+          return;
+        }
+
+        $('generateBtn').disabled = true;
+        $('generateBtnText').textContent = 'Diseñando lección (~5 min)…';
+        $('generationProgress').classList.remove('hidden');
+
+        const setStep = (label, pct) => {
+          $('genStepLabel').textContent = label;
+          $('genStepPct').textContent = `${pct} %`;
+          $('genProgressBar').style.width = `${pct}%`;
+        };
+
+        try {
+          setStep('Estructurando esquema didáctico, gráficas e ilustraciones…', 25);
+          const result = await Api.generateScript({ lessonTitle, content, courseLabel, approach });
+          applyScript(result, true);
+
+          setStep('Sintetizando narración docente por escena…', 60);
+          let ttsHits = 0;
+          let ttsFails = 0;
+          for (let i = 0; i < result.escenas.length; i++) {
+            setStep(`Sintetizando voz de escena ${i + 1} de ${result.escenas.length}…`, 60 + Math.round((i / result.escenas.length) * 35));
+            const ok = await synthesizeSceneAudio(i, { showError: ttsFails === 0 });
+            if (ok) ttsHits += 1;
+            else ttsFails += 1;
+            renderSceneTabs();
+            updateStudioMeta();
+            if (i < result.escenas.length - 1 && state.publicConfig.has_gemini_key) {
+              await new Promise((r) => setTimeout(r, 450));
+            }
+          }
+
+          setStep('¡Vídeo educativo listo!', 100);
+          populateSceneEditor();
+          renderCanvasFrame(0);
+          if (result.warning) showToast(result.warning, 'warning');
+          else if (result.fallback) showToast(`Esquema didáctico local listo (${result.escenas.length} escenas, ${formatTime(getTotalDuration())}).`, 'success');
+          else showToast(`Lección generada con Gemini (${result.escenas.length} escenas, ${ttsHits} audios TTS).`, 'success');
+        } catch (err) {
+          showToast(err.message || 'Error al generar la lección.', 'error');
+        } finally {
+          $('generateBtn').disabled = false;
+          $('generateBtnText').textContent = 'Generar vídeo educativo (~5 min)';
+          setTimeout(() => $('generationProgress').classList.add('hidden'), 1200);
+        }
+      }
+
+      async function toggleMicRecording() {
+        if (state.isRecordingMic) {
+          if (state.micRecorder && state.micRecorder.state !== 'inactive') state.micRecorder.stop();
+          return;
+        }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('Tu navegador no permite grabar con el micrófono.', 'error');
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const idx = state.selectedSceneIndex;
+          state.micChunks = [];
+          const recorder = new MediaRecorder(stream);
+          state.micRecorder = recorder;
+          state.isRecordingMic = true;
+          $('recordDot').textContent = '🔴';
+          $('recordDot').classList.add('recording-pulse');
+          $('recordVoiceLabel').textContent = 'Detener grabación';
+          recorder.ondataavailable = (ev) => { if (ev.data.size > 0) state.micChunks.push(ev.data); };
+          recorder.onstop = async () => {
+            stream.getTracks().forEach((t) => t.stop());
+            state.isRecordingMic = false;
+            $('recordDot').textContent = '🎙️';
+            $('recordDot').classList.remove('recording-pulse');
+            $('recordVoiceLabel').textContent = 'Grabar mi voz';
+            try {
+              const blob = new Blob(state.micChunks, { type: recorder.mimeType || 'audio/webm' });
+              const decoded = await getAudioContextSync().decodeAudioData(await blob.arrayBuffer());
+              state.sceneAudioBuffers[idx] = { buffer: decoded, source: 'mic' };
+              state.script.escenas[idx].duracion_seg = Math.max(5, Math.ceil((decoded.duration + 0.8) * 2) / 2);
+              renderSceneTabs(); populateSceneEditor(); updateStudioMeta();
+              showToast(`Voz grabada en escena ${idx + 1} (${Math.round(decoded.duration)} s).`, 'success');
+            } catch { showToast('No se pudo procesar el audio grabado.', 'error'); }
+          };
+          recorder.start();
+        } catch { showToast('Permiso de micrófono denegado.', 'error'); }
+      }
+
+      function startDictation() {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) { showToast('Dictado por voz no disponible en este navegador.', 'warning'); return; }
+        const rec = new SpeechRec();
+        rec.lang = 'es-ES';
+        $('dictateBtnLabel').textContent = 'Escuchando…';
+        rec.onresult = (ev) => {
+          const t = ev.results?.[0]?.[0]?.transcript || '';
+          if (t) {
+            const area = $('lessonContentInput');
+            area.value = area.value ? `${area.value.trim()} ${t}` : t;
+            updateWordCounter();
+          }
+        };
+        rec.onend = () => { $('dictateBtnLabel').textContent = 'Dictar apuntes'; };
+        rec.start();
+      }
+
+      function downloadScriptTxt() {
+        if (!state.script) return;
+        const lines = [
+          `GUION EDUCATIVO — ${state.script.titulo_leccion}`,
+          `Curso: ${state.script.curso || ''}`,
+          `Duración estimada: ${formatTime(getTotalDuration())}`,
+          '',
+          ...state.script.escenas.flatMap((sc, idx) => [
+            `ESCENA ${idx + 1} [${(SCENE_TYPE_LABELS[sc.tipo] || sc.tipo).toUpperCase()} · ${sc.visual} · ${sc.animacion}] (${Math.round(sc.duracion_seg)} s)`,
+            `Título: ${sc.titulo_grafico}`,
+            `Puntos clave: ${(sc.puntos_clave || []).join(' | ')}`,
+            `Narración: ${sc.narracion_es}`,
+            ''
+          ])
+        ];
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(state.script.titulo_leccion || 'aulavoz').toLowerCase().replace(/[^a-z0-9]+/gi, '-')}-guion.txt`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+      }
+
+      // --- Administración ---
+      async function switchView(nextView) {
+        state.view = nextView;
+        if (nextView === 'admin') {
+          pausePlayback();
+          $('appView').classList.add('hidden');
+          $('adminView').classList.remove('hidden');
+          $('headerBackToAppBtn').classList.remove('hidden');
+          if (state.publicConfig.is_admin) {
+            $('adminLoginCard').classList.add('hidden');
+            $('adminDashboard').classList.remove('hidden');
+            await loadAdminDashboardData();
+          } else {
+            $('adminDashboard').classList.add('hidden');
+            $('adminLoginCard').classList.remove('hidden');
+            $('adminPasswordInput').value = '';
+            $('adminLoginError').classList.add('hidden');
+            $('adminPasswordInput').focus();
+          }
+        } else {
+          $('adminView').classList.add('hidden');
+          $('appView').classList.remove('hidden');
+          $('headerBackToAppBtn').classList.add('hidden');
+          renderCanvasFrame(state.playTimeSec);
+        }
+      }
+
+      async function loadAdminDashboardData() {
+        try {
+          const [cfg, codesData, metricsData] = await Promise.all([Api.getAdminConfig(), Api.getCodes(), Api.getMetrics()]);
+          $('cfgRequireWa').checked = Boolean(cfg.require_whatsapp_permission);
+          $('cfgWaNumber').value = cfg.whatsapp_number || '';
+          $('cfgWaTemplate').value = cfg.whatsapp_template || '';
+          $('cfgGeminiApiKey').value = '';
+          $('cfgGeminiModel').value = cfg.gemini_model || 'gemini-3.8-flash';
+          $('cfgGeminiVoice').value = cfg.gemini_voice || 'Aoede';
+          $('cfgWatermarkText').value = cfg.watermark_text || '';
+          $('cfgPromoEnabled').checked = Boolean(cfg.promo_banner_enabled);
+          $('cfgPromoText').value = cfg.promo_banner_text || '';
+          $('cfgGeminiKeyHint').textContent = cfg.gemini_key_masked
+            ? `Clave actual activa: ${cfg.gemini_key_masked}. Deja el campo vacío para conservarla.`
+            : 'Pega tu clave AIzaSy… de Google Gemini y guarda los cambios.';
+          $('defaultPwdWarning').classList.toggle('hidden', !cfg.isDefaultPassword);
+
+          const badge = $('geminiKeyStatusBadge');
+          if (cfg.has_gemini_key) {
+            badge.textContent = '● GEMINI_API_KEY activa';
+            badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+          } else {
+            badge.textContent = '○ Sin clave de Google Gemini';
+            badge.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200';
+          }
+          renderCodesTable(codesData.codes || []);
+          renderMetrics(metricsData.metrics || {});
+        } catch (err) {
+          showToast(err.message || 'No se pudo cargar administración.', 'error');
+          state.publicConfig.is_admin = false;
+          updatePublicConfigUI();
+          switchView('admin');
+        }
+      }
+
+      function renderMetrics(m) {
+        $('metricVisit').textContent = String(m.visit || 0);
+        $('metricGenerated').textContent = String(m.tutorial_generated || 0);
+        $('metricWhatsapp').textContent = String(m.whatsapp_requested || 0);
+        $('metricCodes').textContent = String(m.code_validated || 0);
+        $('metricExported').textContent = String(m.mp4_exported || 0);
+      }
+
+      function copyTextSafe(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => showToast(`Código «${text}» copiado.`, 'success')).catch(() => fallbackCopy(text));
+        } else fallbackCopy(text);
+      }
+
+      function fallbackCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); showToast(`Código «${text}» copiado.`, 'success'); } catch {}
+        ta.remove();
+      }
+
+      function renderCodesTable(codes) {
+        const tbody = $('codesTableBody');
+        tbody.innerHTML = '';
+        if (!codes.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="py-5 px-4 text-center text-slate-400">Aún no hay códigos creados.</td></tr>';
+          return;
+        }
+        codes.forEach((c) => {
+          const tr = document.createElement('tr');
+          const maxLabel = c.max_uses === 0 ? '∞' : c.max_uses;
+          const badge = c.active
+            ? '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Activo</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">Inactivo</span>';
+          tr.innerHTML = `
+            <td class="py-2.5 px-3.5 font-mono font-bold text-slate-900">${c.code}</td>
+            <td class="py-2.5 px-3.5 text-slate-600">${c.current_uses} / ${maxLabel}</td>
+            <td class="py-2.5 px-3.5">${badge}</td>
+            <td class="py-2.5 px-3.5 text-right space-x-2">
+              <button type="button" data-copy="${c.code}" class="text-xs font-semibold text-blue-600 hover:underline">Copiar</button>
+              ${c.active ? `<button type="button" data-revoke="${c.id}" class="text-xs font-semibold text-rose-600 hover:underline">Revocar</button>` : ''}
+            </td>`;
+          tbody.appendChild(tr);
+        });
+        tbody.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => copyTextSafe(b.getAttribute('data-copy'))));
+        tbody.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', async () => {
+          try {
+            await Api.revokeCode(Number(b.getAttribute('data-revoke')));
+            renderCodesTable((await Api.getCodes()).codes || []);
+            showToast('Código revocado.', 'info');
+          } catch (err) { showToast(err.message, 'error'); }
+        }));
+      }
+
+      function updateWordCounter() {
+        const w = countWords($('lessonContentInput').value);
+        $('wordCounter').textContent = `${w} ${w === 1 ? 'palabra' : 'palabras'}`;
+      }
+
+      function loadPreset(key) {
+        const p = PRESETS[key];
+        if (!p) return;
+        $('lessonTitleInput').value = p.lessonTitle;
+        $('lessonContentInput').value = p.content;
+        $('courseLabelInput').value = p.courseLabel;
+        $('approachSelect').value = p.approach;
+        $('visualStyleSelect').value = p.style;
+        $('paletteSelect').value = p.palette;
+        state.visualStyle = p.style;
+        state.paletteKey = p.palette;
+        updateWordCounter();
+        applyScript(generateLocalLessonScript(p), true);
+        showToast(`Lección «${p.lessonTitle}» cargada (${formatTime(getTotalDuration())}).`, 'info');
+      }
+
+      function wireEvents() {
+        $('lessonContentInput').addEventListener('input', updateWordCounter);
+        $('visualStyleSelect').addEventListener('change', (ev) => { state.visualStyle = ev.target.value; renderCanvasFrame(state.playTimeSec); });
+        $('randomStyleBtn').addEventListener('click', () => {
+          const curIdx = STYLE_KEYS.indexOf(state.visualStyle);
+          const nextStyle = STYLE_KEYS[(curIdx + 1) % STYLE_KEYS.length];
+          state.visualStyle = nextStyle;
+          $('visualStyleSelect').value = nextStyle;
+          renderCanvasFrame(state.playTimeSec);
+        });
+        $('paletteSelect').addEventListener('change', (ev) => { state.paletteKey = ev.target.value; renderCanvasFrame(state.playTimeSec); });
+        $('bgMusicToggle').addEventListener('change', (ev) => {
+          state.bgMusicEnabled = ev.target.checked;
+          if (!state.bgMusicEnabled && state.activeMusicNodes) { state.activeMusicNodes.stop(); state.activeMusicNodes = null; }
+        });
+        $('showCaptionsToggle').addEventListener('change', (ev) => { state.showCaptions = ev.target.checked; renderCanvasFrame(state.playTimeSec); });
+
+        document.querySelectorAll('.preset-btn').forEach((btn) => btn.addEventListener('click', () => loadPreset(btn.getAttribute('data-preset'))));
+        $('dictateBtn').addEventListener('click', startDictation);
+        $('lessonForm').addEventListener('submit', handleGenerateSubmit);
+
+        $('playPauseBtn').addEventListener('click', () => { if (state.isPlaying) pausePlayback(); else startPlayback(); });
+        $('restartBtn').addEventListener('click', () => { pausePlayback(); state.playTimeSec = 0; state.selectedSceneIndex = 0; renderSceneTabs(); populateSceneEditor(); renderCanvasFrame(0); updateTimelineUI(); });
+        $('prevSceneBtn').addEventListener('click', () => { if (!state.script) return; pausePlayback(); state.selectedSceneIndex = Math.max(0, state.selectedSceneIndex - 1); state.playTimeSec = getSceneStartTime(state.selectedSceneIndex); renderSceneTabs(); populateSceneEditor(); renderCanvasFrame(state.playTimeSec); updateTimelineUI(); });
+        $('nextSceneBtn').addEventListener('click', () => { if (!state.script) return; pausePlayback(); state.selectedSceneIndex = Math.min(state.script.escenas.length - 1, state.selectedSceneIndex + 1); state.playTimeSec = getSceneStartTime(state.selectedSceneIndex); renderSceneTabs(); populateSceneEditor(); renderCanvasFrame(state.playTimeSec); updateTimelineUI(); });
+        $('timelineScrubber').addEventListener('input', (ev) => {
+          state.playTimeSec = (Number(ev.target.value) / 1000) * getTotalDuration();
+          state.selectedSceneIndex = getSceneAtTime(state.playTimeSec).index;
+          renderSceneTabs(); populateSceneEditor(); renderCanvasFrame(state.playTimeSec); updateTimelineUI();
+        });
+        $('downloadTxtBtn').addEventListener('click', downloadScriptTxt);
+
+        $('exportMp4Btn').addEventListener('click', () => {
+          if (state.publicConfig.is_admin || !state.publicConfig.require_whatsapp_permission || state.unlockedForSession) runRealVideoExport();
+          else { $('validateCodeError').classList.add('hidden'); $('unlockCodeInput').value = ''; $('whatsappModal').classList.remove('hidden'); }
+        });
+        $('cancelExportBtn').addEventListener('click', () => { state.exportCancelFlag = true; });
+
+        const syncEditedScene = () => {
+          const sc = state.script?.escenas?.[state.selectedSceneIndex];
+          if (!sc) return;
+          sc.tipo = $('editSceneType').value;
+          sc.visual = $('editSceneVisual').value;
+          sc.animacion = $('editSceneAnim').value;
+          sc.icono = $('editSceneIcon').value.trim() || '📘';
+          sc.titulo_grafico = $('editSceneTitle').value.trim().split(/\s+/).slice(0, 7).join(' ');
+          sc.puntos_clave = $('editSceneBullets').value.split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 3);
+          sc.narracion_es = $('editSceneNarration').value.trim();
+          if (!state.sceneAudioBuffers[state.selectedSceneIndex] && !sc.duracion_manual) sc.duracion_seg = calcDurationSec(sc.narracion_es);
+          const dNow = Math.max(3, Math.min(60, Number(sc.duracion_seg) || 18));
+          $('editSceneDurationMeta').textContent = `Duración: ${dNow.toFixed(dNow % 1 ? 1 : 0)} s`;
+          $('editSceneDuration').value = String(dNow);
+          $('editSceneDurationRange').value = String(Math.min(45, dNow));
+          renderSceneTabs(); updateStudioMeta(); renderCanvasFrame(state.playTimeSec);
+        };
+        ['editSceneType', 'editSceneVisual', 'editSceneAnim', 'editSceneIcon', 'editSceneTitle', 'editSceneBullets', 'editSceneNarration'].forEach((id) => $(id).addEventListener('input', syncEditedScene));
+
+        const applyManualDur = (val) => {
+          const sc = state.script?.escenas?.[state.selectedSceneIndex];
+          if (!sc) return;
+          const clamped = Math.max(3, Math.min(60, Math.round((Number(val) || 18) * 2) / 2));
+          sc.duracion_seg = clamped; sc.duracion_manual = true;
+          $('editSceneDuration').value = String(clamped);
+          $('editSceneDurationRange').value = String(Math.min(45, clamped));
+          $('editSceneDurationMeta').textContent = `Duración: ${clamped.toFixed(clamped % 1 ? 1 : 0)} s`;
+          renderSceneTabs(); updateStudioMeta(); renderCanvasFrame(state.playTimeSec);
+        };
+        $('editSceneDuration').addEventListener('input', (ev) => applyManualDur(ev.target.value));
+        $('editSceneDurationRange').addEventListener('input', (ev) => applyManualDur(ev.target.value));
+        $('autoDurationBtn').addEventListener('click', () => {
+          const sc = state.script?.escenas?.[state.selectedSceneIndex];
+          if (!sc) return;
+          sc.duracion_manual = false;
+          const entry = state.sceneAudioBuffers[state.selectedSceneIndex];
+          sc.duracion_seg = entry && entry.buffer ? Math.max(5, Math.ceil((entry.buffer.duration + 0.8) * 2) / 2) : calcDurationSec(sc.narracion_es);
+          populateSceneEditor(); renderSceneTabs(); updateStudioMeta(); renderCanvasFrame(state.playTimeSec);
+        });
+
+        $('genAllVoicesBtn').addEventListener('click', async () => {
+          if (!state.script?.escenas?.length) return;
+          const btn = $('genAllVoicesBtn'); btn.disabled = true;
+          let okCount = 0;
+          for (let i = 0; i < state.script.escenas.length; i++) {
+            btn.textContent = `Sintetizando ${i + 1}/${state.script.escenas.length}…`;
+            if (await synthesizeSceneAudio(i, { showError: true })) okCount += 1;
+            renderSceneTabs(); updateStudioMeta();
+            if (i < state.script.escenas.length - 1) await new Promise((r) => setTimeout(r, 450));
+          }
+          btn.disabled = false; btn.textContent = '🔊 Generar todas las voces';
+          populateSceneEditor();
+          showToast(`Voces generadas en ${okCount} de ${state.script.escenas.length} escenas.`, okCount === state.script.escenas.length ? 'success' : 'warning');
+        });
+
+        $('addSceneBtn').addEventListener('click', () => {
+          if (!state.script) return;
+          const newScene = {
+            tipo: 'concepto', animacion: 'cascada', visual: 'mapa_mental',
+            datos_visuales: [{ etiqueta: 'Idea 1', valor: 75 }, { etiqueta: 'Idea 2', valor: 85 }, { etiqueta: 'Idea 3', valor: 70 }, { etiqueta: 'Síntesis', valor: 90 }],
+            duracion_seg: 20, titulo_grafico: 'Nuevo concepto de la lección',
+            puntos_clave: ['Definición clara del concepto', 'Ejemplo práctico aplicado'], icono: '📘',
+            narracion_es: 'En esta nueva escena ampliamos el análisis conceptual para reforzar la comprensión de la lección.'
+          };
+          const idx = Math.max(1, state.script.escenas.length - 1);
+          state.script.escenas.splice(idx, 0, newScene);
+          state.selectedSceneIndex = idx; state.playTimeSec = getSceneStartTime(idx);
+          renderSceneTabs(); populateSceneEditor(); updateStudioMeta(); renderCanvasFrame(state.playTimeSec);
+        });
+
+        $('deleteSceneBtn').addEventListener('click', () => {
+          if (!state.script || state.script.escenas.length <= 2) { showToast('La lección debe conservar al menos 2 escenas.', 'warning'); return; }
+          const idx = state.selectedSceneIndex;
+          state.script.escenas.splice(idx, 1); delete state.sceneAudioBuffers[idx];
+          state.selectedSceneIndex = Math.max(0, idx - 1); state.playTimeSec = getSceneStartTime(state.selectedSceneIndex);
+          renderSceneTabs(); populateSceneEditor(); updateStudioMeta(); renderCanvasFrame(state.playTimeSec);
+        });
+
+        $('regenSceneAudioBtn').addEventListener('click', async () => {
+          const idx = state.selectedSceneIndex;
+          $('regenSceneAudioBtn').disabled = true; $('regenSceneAudioBtn').textContent = 'Generando…';
+          const ok = await synthesizeSceneAudio(idx, { showError: true });
+          $('regenSceneAudioBtn').disabled = false; $('regenSceneAudioBtn').textContent = '🔊 Regenerar audio';
+          if (ok) { renderSceneTabs(); populateSceneEditor(); updateStudioMeta(); showToast(`Audio listo en escena ${idx + 1}.`, 'success'); }
+        });
+
+        $('recordVoiceBtn').addEventListener('click', toggleMicRecording);
+        $('clearVoiceBtn').addEventListener('click', () => {
+          const idx = state.selectedSceneIndex;
+          delete state.sceneAudioBuffers[idx];
+          state.script.escenas[idx].duracion_seg = calcDurationSec(state.script.escenas[idx].narracion_es);
+          renderSceneTabs(); populateSceneEditor(); updateStudioMeta();
+        });
+
+        $('closeWaModalBtn').addEventListener('click', () => $('whatsappModal').classList.add('hidden'));
+        $('openWhatsappBtn').addEventListener('click', async () => {
+          const cfg = state.publicConfig;
+          const msg = (cfg.whatsapp_template || '').replace(/\{app\}/gi, state.script?.titulo_leccion || 'Mi lección').replace(/\{duracion\}/gi, formatTime(getTotalDuration()));
+          await Api.trackMetric('whatsapp_requested', { lesson: state.script?.titulo_leccion });
+          window.open(`https://wa.me/${cfg.whatsapp_number}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+        });
+        $('validateCodeForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          $('validateCodeError').classList.add('hidden');
+          try {
+            const res = await Api.validateCode($('unlockCodeInput').value.trim());
+            if (!res.valid) { $('validateCodeError').textContent = res.error || 'Código no válido.'; $('validateCodeError').classList.remove('hidden'); return; }
+            state.unlockedForSession = true; $('whatsappModal').classList.add('hidden'); updatePublicConfigUI();
+            showToast(res.message || 'Descarga desbloqueada.', 'success');
+            runRealVideoExport();
+          } catch (err) { $('validateCodeError').textContent = err.message; $('validateCodeError').classList.remove('hidden'); }
+        });
+
+        $('logoTrigger').addEventListener('click', () => {
+          state.logoClicks += 1; clearTimeout(state.logoClickTimer);
+          state.logoClickTimer = setTimeout(() => { state.logoClicks = 0; }, 1600);
+          if (state.logoClicks >= 5) { state.logoClicks = 0; switchView('admin'); }
+        });
+        document.addEventListener('keydown', (ev) => {
+          if (ev.ctrlKey && ev.shiftKey && ev.key.toLowerCase() === 'a') { ev.preventDefault(); switchView(state.view === 'admin' ? 'app' : 'admin'); }
+        });
+        $('footerAdminLink').addEventListener('click', () => switchView('admin'));
+        $('topBarAdminBtn').addEventListener('click', () => switchView('admin'));
+        $('headerBackToAppBtn').addEventListener('click', () => switchView('app'));
+        $('adminBackBtn').addEventListener('click', () => {
+          switchView('app');
+          if (state.publicConfig.is_admin) showToast('Sigues en modo administrador. Pulsa «Salir (probar como usuario)» para probar el bloqueo por WhatsApp.', 'info');
+        });
+        $('loginCancelBtn').addEventListener('click', () => switchView('app'));
+
+        $('adminLoginForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault(); $('adminLoginError').classList.add('hidden');
+          try {
+            await Api.adminLogin($('adminPasswordInput').value);
+            state.publicConfig = await Api.getPublicConfig(); state.publicConfig.is_admin = true;
+            updatePublicConfigUI(); await switchView('admin');
+            showToast('Sesión administrativa iniciada.', 'success');
+          } catch (err) { $('adminLoginError').textContent = err.message; $('adminLoginError').classList.remove('hidden'); }
+        });
+
+        const doLogout = async () => {
+          await Api.adminLogout();
+          state.publicConfig = await Api.getPublicConfig(); state.publicConfig.is_admin = false;
+          updatePublicConfigUI(); switchView('app'); showToast('Sesión administrativa cerrada.', 'info');
+        };
+        $('topBarLogoutBtn').addEventListener('click', doLogout);
+        $('adminLogoutBtn').addEventListener('click', doLogout);
+
+        $('adminConfigForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          try {
+            const payload = {
+              require_whatsapp_permission: $('cfgRequireWa').checked,
+              whatsapp_number: $('cfgWaNumber').value.trim(),
+              whatsapp_template: $('cfgWaTemplate').value.trim(),
+              gemini_api_key: $('cfgGeminiApiKey').value.trim(),
+              gemini_model: $('cfgGeminiModel').value,
+              gemini_voice: $('cfgGeminiVoice').value,
+              watermark_text: $('cfgWatermarkText').value.trim(),
+              promo_banner_enabled: $('cfgPromoEnabled').checked,
+              promo_banner_text: $('cfgPromoText').value.trim()
+            };
+            const res = await Api.saveAdminConfig(payload);
+            state.selectedVoiceName = payload.gemini_voice || 'Aoede';
+            state.sceneAudioBuffers = {};
+            state.publicConfig = await Api.getPublicConfig();
+            updatePublicConfigUI(); renderSceneTabs(); updateStudioMeta();
+            showToast(res.message || 'Configuración guardada.', 'success');
+          } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        $('toggleCfgGeminiKeyBtn').addEventListener('click', () => {
+          const inp = $('cfgGeminiApiKey');
+          const showing = inp.type === 'text';
+          inp.type = showing ? 'password' : 'text';
+          $('toggleCfgGeminiKeyBtn').textContent = showing ? 'Mostrar' : 'Ocultar';
+        });
+        $('clearCfgGeminiKeyBtn').addEventListener('click', async () => {
+          try {
+            await Api.saveAdminConfig({
+              require_whatsapp_permission: $('cfgRequireWa').checked, whatsapp_number: $('cfgWaNumber').value.trim(),
+              whatsapp_template: $('cfgWaTemplate').value.trim(), clear_gemini_key: true,
+              gemini_model: $('cfgGeminiModel').value, gemini_voice: $('cfgGeminiVoice').value,
+              watermark_text: $('cfgWatermarkText').value.trim(), promo_banner_enabled: $('cfgPromoEnabled').checked,
+              promo_banner_text: $('cfgPromoText').value.trim()
+            });
+            state.publicConfig = await Api.getPublicConfig(); updatePublicConfigUI(); await loadAdminDashboardData();
+            showToast('Clave de Gemini eliminada.', 'info');
+          } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        $('testWaBtn').addEventListener('click', () => {
+          const phone = $('cfgWaNumber').value.replace(/[^\d]/g, '') || '50212345678';
+          const msg = ($('cfgWaTemplate').value || '').replace(/\{app\}/gi, 'Lección de prueba').replace(/\{duracion\}/gi, '05:00');
+          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+        });
+        $('testGeminiBtn').addEventListener('click', async () => {
+          $('testGeminiResult').textContent = 'Probando conexión…';
+          const res = await Api.testGemini($('cfgGeminiModel').value, $('cfgGeminiApiKey').value.trim());
+          $('testGeminiResult').textContent = res.message || 'Prueba completada.';
+          showToast(res.message || 'Prueba completada.', res.ok ? 'success' : 'warning');
+        });
+        $('testTtsVoiceBtn').addEventListener('click', async () => {
+          const voice = $('cfgGeminiVoice').value;
+          const key = $('cfgGeminiApiKey').value.trim();
+          $('testGeminiResult').textContent = `Sintetizando prueba con ${voice}…`;
+          const res = await Api.generateAudio('Bienvenidos a esta clase. Hoy estudiaremos los conceptos clave paso a paso en AulaVoz.', { apiKey: key, voice });
+          if (!res.fallback && res.audioBase64) {
+            try {
+              const buf = await decodeBase64Audio(res.audioBase64, res.mimeType);
+              const audioCtx = await ensureAudioContext();
+              const src = audioCtx.createBufferSource(); src.buffer = buf; src.connect(audioCtx.destination); src.start();
+              $('testGeminiResult').textContent = `Voz ${voice} reproducida (${buf.duration.toFixed(1)} s).`;
+              showToast(`Voz ${voice} funcionando con Gemini TTS.`, 'success');
+            } catch (err) { showToast(`Error al decodificar audio: ${err.message}`, 'error'); }
+          } else {
+            $('testGeminiResult').textContent = res.reason || 'No se pudo sintetizar audio.';
+            showToast(res.reason || 'No se pudo sintetizar audio.', 'warning');
+          }
+        });
+
+        $('createCodeForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          try {
+            const res = await Api.createCode($('newCodeInput').value, $('newCodeMaxUses').value);
+            $('newCodeInput').value = '';
+            renderCodesTable((await Api.getCodes()).codes || []);
+            showToast(`Código «${res.code.code}» creado.`, 'success');
+          } catch (err) { showToast(err.message, 'error'); }
+        });
+        $('quickCodeBtn').addEventListener('click', async () => {
+          try {
+            const res = await Api.createCode('', 15);
+            renderCodesTable((await Api.getCodes()).codes || []);
+            copyTextSafe(res.code.code);
+          } catch (err) { showToast(err.message, 'error'); }
+        });
+        $('refreshMetricsBtn').addEventListener('click', async () => { renderMetrics((await Api.getMetrics()).metrics || {}); showToast('Estadísticas actualizadas.', 'info'); });
+        $('resetMetricsBtn').addEventListener('click', async () => {
+          if (!state.resetConfirmArmed) {
+            state.resetConfirmArmed = true; $('resetMetricsBtn').textContent = 'Confirmar reinicio';
+            setTimeout(() => { state.resetConfirmArmed = false; $('resetMetricsBtn').textContent = 'Reiniciar estadísticas'; }, 4000);
+            return;
+          }
+          state.resetConfirmArmed = false; $('resetMetricsBtn').textContent = 'Reiniciar estadísticas';
+          await Api.resetMetrics(); renderMetrics((await Api.getMetrics()).metrics || {});
+          showToast('Estadísticas reiniciadas.', 'success');
+        });
+        $('changePasswordForm').addEventListener('submit', async (ev) => {
+          ev.preventDefault();
+          try {
+            const res = await Api.changePassword($('curPwdInput').value, $('newPwdInput').value);
+            $('curPwdInput').value = ''; $('newPwdInput').value = ''; $('defaultPwdWarning').classList.add('hidden');
+            showToast(res.message || 'Contraseña actualizada.', 'success');
+          } catch (err) { showToast(err.message, 'error'); }
+        });
+      }
+
+      async function init() {
+        wireEvents();
+        loadPreset('filosofia');
+        try { state.publicConfig = await Api.getPublicConfig(); } catch {}
+        updatePublicConfigUI();
+        Api.trackMetric('visit');
+      }
+
+      window.addEventListener('DOMContentLoaded', init);
+    })();
+  </script>
+</body>
+</html>

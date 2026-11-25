@@ -1,0 +1,19 @@
+{
+  "name": "aulavoz",
+  "version": "1.0.0",
+  "description": "AulaVoz — Generador de vídeos educativos explicativos (~5 min, 720p) con esquemas, gráficas, ilustraciones, 8 estilos visuales, Google Gemini y Neon PostgreSQL.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}
